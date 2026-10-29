@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from codex_session_cleaner.projects import (
+from agent_session_manager.projects import (
     TEMPORARY_PROJECT_KEY,
     is_temporary_workspace,
     normalize_workspace,

@@ -6,17 +6,17 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import codex_session_cleaner.executor as executor_module
-from codex_session_cleaner.executor import CleanupExecutor
-from codex_session_cleaner.planner import build_plan
-from codex_session_cleaner.scanner import SessionScanner
+import agent_session_manager.executor as executor_module
+from agent_session_manager.executor import CleanupExecutor
+from agent_session_manager.planner import build_plan
+from agent_session_manager.scanner import SessionScanner
 
 from tests.helpers import CHILD_ID, USER_ID
 from tests.test_multistore import create_multistore_fixture
 
 
 class FailureRollbackTests(unittest.TestCase):
-    @patch("codex_session_cleaner.executor.require_codex_stopped")
+    @patch("agent_session_manager.executor.require_codex_stopped")
     def test_failure_after_log_deletion_restores_logs_and_rollouts(self, _guard):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
@@ -31,7 +31,7 @@ class FailureRollbackTests(unittest.TestCase):
                     raise RuntimeError("injected failure after log deletion")
                 return original_verify(codex_home, deletion_ids, include_logs=False)
 
-            with patch("codex_session_cleaner.executor.verify_no_references",
+            with patch("agent_session_manager.executor.verify_no_references",
                        side_effect=fail_final_verification):
                 with self.assertRaisesRegex(RuntimeError, "injected failure"):
                     CleanupExecutor().execute(build_plan(scan, [USER_ID]))
@@ -45,6 +45,24 @@ class FailureRollbackTests(unittest.TestCase):
                 logs.close()
             self.assertEqual(ids, {USER_ID, CHILD_ID})
             self.assertFalse(any(home.glob(".cleaner-transaction_*")))
+
+    @patch("agent_session_manager.executor.require_codex_stopped")
+    def test_keyboard_interrupt_restores_rollouts_and_database(self, _guard):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            create_multistore_fixture(home)
+            scan = SessionScanner(home).scan()
+            parent = scan.sessions[USER_ID].path
+            with patch("agent_session_manager.executor.verify_no_references", side_effect=KeyboardInterrupt):
+                with self.assertRaises(KeyboardInterrupt):
+                    CleanupExecutor().execute(build_plan(scan, [USER_ID]))
+            self.assertTrue(parent.is_file())
+            connection = sqlite3.connect(home / "state_5.sqlite")
+            try:
+                self.assertIsNotNone(connection.execute("SELECT id FROM threads WHERE id = ?", (USER_ID,)).fetchone())
+            finally:
+                connection.close()
+            self.assertFalse(list(home.glob(".cleaner-transaction_*")))
 
 
 if __name__ == "__main__":

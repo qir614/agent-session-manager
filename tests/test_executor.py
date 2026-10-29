@@ -7,16 +7,16 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from codex_session_cleaner.backup import verify_backup
-from codex_session_cleaner.executor import CleanupExecutor, restore_backup
-from codex_session_cleaner.planner import build_plan
-from codex_session_cleaner.scanner import SessionScanner
+from agent_session_manager.backup import verify_backup
+from agent_session_manager.executor import CleanupExecutor, restore_backup
+from agent_session_manager.planner import build_plan
+from agent_session_manager.scanner import SessionScanner
 
 from tests.helpers import CHILD_ID, ORPHAN_ID, USER_ID, create_fixture
 
 
 class ExecutorTests(unittest.TestCase):
-    @patch("codex_session_cleaner.executor.require_codex_stopped")
+    @patch("agent_session_manager.executor.require_codex_stopped")
     def test_cleanup_backs_up_and_updates_all_known_stores(self, _guard):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
@@ -49,7 +49,7 @@ class ExecutorTests(unittest.TestCase):
             self.assertNotIn(ORPHAN_ID, ids)
             self.assertIn((USER_ID, CHILD_ID), edges)
 
-    @patch("codex_session_cleaner.executor.require_codex_stopped")
+    @patch("agent_session_manager.executor.require_codex_stopped")
     def test_restore_recovers_deleted_file_and_state(self, _guard):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
@@ -67,7 +67,7 @@ class ExecutorTests(unittest.TestCase):
             connection.close()
             self.assertIn(ORPHAN_ID, ids)
 
-    @patch("codex_session_cleaner.executor.require_codex_stopped")
+    @patch("agent_session_manager.executor.require_codex_stopped")
     def test_cleanup_does_not_keep_backup_by_default(self, _guard):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)

@@ -20,18 +20,18 @@ jobs:
           cache: pip
       - name: Build single-file Windows application
         shell: pwsh
-        run: .\build_windows.ps1 -Clean
+        run: .\windows\build.ps1 -Clean
       - name: Write SHA-256 checksum
         shell: pwsh
         run: |
-          $hash = (Get-FileHash -LiteralPath dist\CodexLocalSessionManager.exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  CodexLocalSessionManager.exe" | Set-Content -LiteralPath dist\CodexLocalSessionManager.exe.sha256 -Encoding ascii
+          $hash = (Get-FileHash -LiteralPath dist\AgentSessionManager.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  AgentSessionManager.exe" | Set-Content -LiteralPath dist\AgentSessionManager.exe.sha256 -Encoding ascii
       - uses: actions/upload-artifact@v4
         with:
-          name: CodexLocalSessionManager-windows-x64
+          name: AgentSessionManager-windows-x64
           path: |
-            dist/CodexLocalSessionManager.exe
-            dist/CodexLocalSessionManager.exe.sha256
+            dist/AgentSessionManager.exe
+            dist/AgentSessionManager.exe.sha256
           if-no-files-found: error
       - name: Publish tagged release assets
         if: startsWith(github.ref, 'refs/tags/')
@@ -44,4 +44,4 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             gh release create $tag --title $tag --generate-notes
           }
-          gh release upload $tag dist\CodexLocalSessionManager.exe dist\CodexLocalSessionManager.exe.sha256 --clobber
+          gh release upload $tag dist\AgentSessionManager.exe dist\AgentSessionManager.exe.sha256 --clobber

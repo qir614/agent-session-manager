@@ -1,0 +1,26 @@
+"""Application adapters are independent of OS adapters in platforms/."""
+from __future__ import annotations
+from typing import Protocol
+from pathlib import Path
+from ..models import ScanResult, SessionRecord, CleanupPlan, ExecutionReport
+
+class Application(Protocol):
+    id: str
+    label: str
+    def default_home(self) -> Path: ...
+    def scan(self, home: Path, session_root: Path | None = None) -> ScanResult: ...
+    def read(self, record: SessionRecord, include_internal: bool = False): ...
+    def plan(self, scan: ScanResult, selected: list[str]) -> CleanupPlan: ...
+    def impact(self, scan: ScanResult, plan: CleanupPlan): ...
+    def execute(self, plan: CleanupPlan, **kwargs) -> ExecutionReport: ...
+    def running(self, home: Path | None = None) -> list[str]: ...
+    def export(self, scan: ScanResult, selected_ids: list[str], destination: Path): ...
+
+def get_application(name: str = "codex") -> Application:
+    if name == "codex":
+        from .codex import CodexApplication
+        return CodexApplication()
+    if name == "dsh":
+        from .dsh import DshApplication
+        return DshApplication()
+    raise ValueError(f"Unsupported application: {name}")

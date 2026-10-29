@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from codex_session_cleaner.backup_manager import delete_backup, list_backups, retention_candidates
-from codex_session_cleaner.models import BackupRecord
+from agent_session_manager.backup_manager import delete_backup, list_backups, retention_candidates
+from agent_session_manager.models import BackupRecord
 
 
 class BackupManagerTests(unittest.TestCase):
@@ -21,7 +21,7 @@ class BackupManagerTests(unittest.TestCase):
             records = list_backups(root)
             self.assertEqual(len(records), 1)
             self.assertEqual(records[0].status, "incomplete")
-            with patch("codex_session_cleaner.backup_manager.require_codex_stopped"):
+            with patch("agent_session_manager.backup_manager.require_codex_stopped"):
                 released = delete_backup(root, target, Path(tmp))
             self.assertGreater(released, 0)
             self.assertFalse(target.exists())
@@ -34,7 +34,7 @@ class BackupManagerTests(unittest.TestCase):
             unmanaged.mkdir()
             nested = root / "backup_codex_sessions_20260820_120000" / "nested"
             nested.mkdir(parents=True)
-            with patch("codex_session_cleaner.backup_manager.require_codex_stopped"):
+            with patch("agent_session_manager.backup_manager.require_codex_stopped"):
                 for candidate in (root, unmanaged, nested):
                     with self.subTest(candidate=candidate):
                         with self.assertRaises(ValueError):

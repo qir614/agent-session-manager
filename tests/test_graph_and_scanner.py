@@ -4,10 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from codex_session_cleaner.dependency_graph import DependencyError
-from codex_session_cleaner.models import SessionStatus
-from codex_session_cleaner.planner import build_plan
-from codex_session_cleaner.scanner import SessionScanner
+from agent_session_manager.dependency_graph import DependencyError
+from agent_session_manager.models import SessionStatus
+from agent_session_manager.planner import build_plan
+from agent_session_manager.scanner import SessionScanner
 
 from tests.helpers import (
     CHILD_ID,

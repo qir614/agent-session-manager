@@ -6,11 +6,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock
 
-from codex_session_cleaner.backup import create_manual_backup, verify_backup
-from codex_session_cleaner.codex_controller import CodexController
-from codex_session_cleaner.conversation_reader import read_conversation
-from codex_session_cleaner.scanner import SessionScanner
-from codex_session_cleaner.settings import AppSettings, load_settings, save_settings
+from agent_session_manager.backup import create_manual_backup, verify_backup
+from agent_session_manager.codex_controller import CodexController
+from agent_session_manager.conversation_reader import read_conversation
+from agent_session_manager.scanner import SessionScanner
+from agent_session_manager.settings import AppSettings, load_settings, save_settings
 
 from tests.helpers import CHILD_ID, USER_ID, create_fixture
 

@@ -4,9 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from codex_session_cleaner.impact_analyzer import analyze_deletion
-from codex_session_cleaner.planner import build_plan
-from codex_session_cleaner.scanner import SessionScanner
+from agent_session_manager.impact_analyzer import analyze_deletion
+from agent_session_manager.planner import build_plan
+from agent_session_manager.scanner import SessionScanner
 
 from tests.helpers import CHILD_ID, USER_ID
 from tests.test_multistore import create_multistore_fixture

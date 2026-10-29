@@ -13,3 +13,19 @@ backup_before_*/
 *.log
 .DS_Store
 Thumbs.db
+
+# Local collaboration and agent runtime state
+.agents/state/
+.agent-tmp/
+
+# Local UI review and bounded on-disk test data
+.ui-review/
+.review-tmp/
+.conda-ui-review/
+
+# Optional Linux font runtime, prepared locally
+linux/.runtime/
+
+# Review evidence and audit snapshots contain real session identifiers;
+# they stay on disk as local evidence and are not versioned.
+reports/

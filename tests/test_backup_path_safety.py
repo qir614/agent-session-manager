@@ -6,9 +6,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from codex_session_cleaner.backup import contained_path, create_manual_backup, verify_backup
-from codex_session_cleaner.executor import restore_backup
-from codex_session_cleaner.scanner import SessionScanner
+from agent_session_manager.backup import contained_path, create_manual_backup, verify_backup
+from agent_session_manager.executor import restore_backup
+from agent_session_manager.scanner import SessionScanner
 
 from tests.helpers import USER_ID, create_fixture
 
@@ -36,7 +36,7 @@ class BackupPathSafetyTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 verify_backup(archive)
 
-    @patch("codex_session_cleaner.executor.require_codex_stopped")
+    @patch("agent_session_manager.executor.require_codex_stopped")
     def test_session_archive_is_never_restored_as_state_snapshot(self, _guard):
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as output:
             home = Path(tmp)

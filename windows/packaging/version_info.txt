@@ -1,0 +1,30 @@
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(2026, 10, 29, 0),
+    prodvers=(2026, 10, 29, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        '040904B0',
+        [
+          StringStruct('CompanyName', 'Agent Session Manager contributors'),
+          StringStruct('FileDescription', 'Agent Session Manager'),
+          StringStruct('FileVersion', '2026.10.29'),
+          StringStruct('InternalName', 'AgentSessionManager'),
+          StringStruct('LegalCopyright', 'MIT License'),
+          StringStruct('OriginalFilename', 'AgentSessionManager.exe'),
+          StringStruct('ProductName', 'Agent Session Manager'),
+          StringStruct('ProductVersion', '2026.10.29')
+        ]
+      )
+    ]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)

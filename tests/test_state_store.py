@@ -5,13 +5,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from codex_session_cleaner.state_store import filter_global_state, filter_session_index
-from codex_session_cleaner.process_guard import require_codex_stopped
+from agent_session_manager.state_store import filter_global_state, filter_session_index
+from agent_session_manager.process_guard import require_codex_stopped
 from unittest.mock import patch
 
 
 class StateStoreTests(unittest.TestCase):
-    @patch("codex_session_cleaner.process_guard.running_codex_processes", return_value=["ChatGPT.exe"])
+    @patch("agent_session_manager.process_guard.running_codex_processes", return_value=["ChatGPT.exe"])
     def test_running_codex_blocks_writes(self, _processes):
         with self.assertRaisesRegex(RuntimeError, "completely closed"):
             require_codex_stopped()

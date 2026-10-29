@@ -3,25 +3,26 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "codex-local-session-cleaner"
-version = "0.6.0"
-description = "Graphical local Codex session manager with dependency-aware operations."
+name = "agent-session-manager"
+version = "2026.10.29"
+description = "Local session manager and cleaner for Codex and DSH conversation data with independent application adapters."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "Codex Local Session Cleaner contributors" }]
-keywords = ["codex", "session", "cleanup", "sqlite", "jsonl"]
+authors = [{ name = "Agent Session Manager contributors" }]
+keywords = ["agent", "session-manager", "codex", "dsh", "session", "cleanup", "sqlite", "jsonl"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: MIT License",
   "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3",
   "Topic :: Utilities",
 ]
 
 [project.scripts]
-codex-session-cleaner = "codex_session_cleaner.cli:main"
-codex-session-cleaner-gui = "codex_session_cleaner.gui:main"
+agent-session-manager = "agent_session_manager.cli:main"
+agent-session-manager-gui = "agent_session_manager.gui:main"
 
 [project.optional-dependencies]
 build = ["pyinstaller>=6.14,<7"]

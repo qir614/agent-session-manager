@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 
 
@@ -12,6 +13,24 @@ MISSING_PARENT_ID = "00000000-0000-4000-8000-000000000004"
 GUARDIAN_ID = "00000000-0000-4000-8000-000000000005"
 UNKNOWN_ID = "00000000-0000-4000-8000-000000000006"
 GRANDCHILD_ID = "00000000-0000-4000-8000-000000000007"
+
+
+@contextmanager
+def open_sqlite(*args, **kwargs):
+    """Commit on success, roll back on failure, and always close the handle.
+
+    sqlite3's own connection context manager commits but never closes, which
+    leaks the database file on Windows until garbage collection.
+    """
+    connection = sqlite3.connect(*args, **kwargs)
+    try:
+        yield connection
+        connection.commit()
+    except BaseException:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def write_rollout(

@@ -7,11 +7,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from codex_session_cleaner.executor import CleanupExecutor
-from codex_session_cleaner.maintenance import compact_log_databases, log_database_stats
-from codex_session_cleaner.models import SessionStatus
-from codex_session_cleaner.planner import build_plan
-from codex_session_cleaner.scanner import SessionScanner
+from agent_session_manager.executor import CleanupExecutor
+from agent_session_manager.maintenance import compact_log_databases, log_database_stats
+from agent_session_manager.models import SessionStatus
+from agent_session_manager.planner import build_plan
+from agent_session_manager.scanner import SessionScanner
 
 from tests.helpers import CHILD_ID, USER_ID, create_fixture
 
@@ -101,7 +101,7 @@ class MultiStoreTests(unittest.TestCase):
             self.assertEqual(scan.status_by_id[GHOST_ID], SessionStatus.LOCAL_GHOST)
             self.assertEqual(scan.status_by_id[CLOUD_ID], SessionStatus.CLOUD_CATALOG)
 
-    @patch("codex_session_cleaner.executor.require_codex_stopped")
+    @patch("agent_session_manager.executor.require_codex_stopped")
     def test_delete_removes_all_core_and_log_references(self, _guard):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
@@ -121,12 +121,12 @@ class MultiStoreTests(unittest.TestCase):
             logs = sqlite3.connect(home / "logs_2.sqlite")
             self.assertEqual(logs.execute("SELECT COUNT(*) FROM logs").fetchone()[0], 0)
             logs.close()
-            global_state = json.loads((home / ".codex-global-state.json").read_text())
+            global_state = json.loads((home / ".codex-global-state.json").read_text(encoding="utf-8"))
             self.assertNotIn(USER_ID, global_state["thread-project-assignments"])
             self.assertNotIn(USER_ID, global_state["sidebar-project-thread-orders"][PROJECT_ID]["threadIds"])
             self.assertNotIn(USER_ID, global_state["thread-writable-roots"])
 
-    @patch("codex_session_cleaner.maintenance.require_codex_stopped")
+    @patch("agent_session_manager.maintenance.require_codex_stopped")
     def test_compaction_preserves_rows_and_releases_space(self, _guard):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
