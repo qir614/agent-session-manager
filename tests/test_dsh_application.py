@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from agent_session_manager.applications import get_application
 from agent_session_manager.applications.dsh import DshApplication
-from agent_session_manager.applications.dsh_format import rows, zstd_library
+from agent_session_manager.applications.dsh_format import rows, zstd_available, zstd_candidates, zstd_library
 from agent_session_manager.backup import verify_backup
 from agent_session_manager.cli import main
 from agent_session_manager.executor import CleanupExecutor
@@ -20,7 +20,7 @@ from agent_session_manager.planner import build_plan
 ROOT = "session-main"
 CHILD = "session-child"
 KEEP = "session-keep"
-HAS_ZSTD = bool(C.util.find_library("zstd"))
+HAS_ZSTD = zstd_available()
 
 
 def compress(data):
@@ -329,6 +329,21 @@ class DshAdditionalContracts(unittest.TestCase):
             self.assertEqual(len(pending), 1)
             self.assertTrue((pending[0] / "recovery.json").is_file())
             self.assertTrue(any((pending[0] / "data").rglob("session.v4.jsonl")))
+
+
+class DshZstdDiscovery(unittest.TestCase):
+    def test_explicit_library_path_is_tried_first(self):
+        with patch.dict(os.environ, {"AGENT_SESSION_MANAGER_ZSTD": "/nonexistent/libzstd-custom.so"}, clear=False):
+            first = next(iter(zstd_candidates()))
+        self.assertEqual(first, ("AGENT_SESSION_MANAGER_ZSTD", "/nonexistent/libzstd-custom.so"))
+
+    def test_availability_matches_loadability(self):
+        try:
+            zstd_library()
+        except (OSError, ValueError):
+            self.assertFalse(zstd_available())
+        else:
+            self.assertTrue(zstd_available())
 
 
 class DshReaderBoundaries(unittest.TestCase):

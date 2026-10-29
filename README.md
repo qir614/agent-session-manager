@@ -203,4 +203,4 @@ python -B run_cli.py --app dsh --home /path/to/.dsh plan session-ID
 python -B run_cli.py --app dsh --home /path/to/.dsh --sessions-root /path/to/.dsh/custom gui
 ```
 
-`delete` 默认只预览，按实际依赖数量用 `--apply --confirm DELETE-N` 执行。DSH 必须关闭。Linux 压缩读取需要现有环境中的 libzstd，无需运行 DSH/Node；旧格式只读，Windows 的 DSH 删除尚未启用。应用适配与 Linux/Windows 适配分别管理，原 Codex 命令继续可用。
+`delete` 默认只预览，按实际依赖数量用 `--apply --confirm DELETE-N` 执行。DSH 必须关闭。压缩读取需要 libzstd，无需运行 DSH/Node：先查 `AGENT_SESSION_MANAGER_ZSTD`（也认 `DSH_ZSTD_LIBRARY`、`ZSTD_LIBRARY`），再查系统库搜索，最后按 PATH 与常见 Git/conda 安装位置找 `libzstd.dll`/`libzstd.so`，找到即用；找不到才提示安装，裸 NDJSON 会话不受影响。旧格式只读，Windows 的 DSH 删除尚未启用。应用适配与 Linux/Windows 适配分别管理，原 Codex 命令继续可用。

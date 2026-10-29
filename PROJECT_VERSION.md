@@ -15,3 +15,5 @@
 
 - 2026-10-29：产品更名为 Agent Session Manager／智能体会话管理器，仓库名 agent-session-manager：Python 包改为 agent_session_manager，Windows 单文件程序改为 AgentSessionManager.exe，CLI 为 agent-session-manager，配置目录改为 AgentSessionManager；配置拆分为常规／Codex／DSH 三段并升级到 schema_version 2，旧版扁平 settings.json 自动迁移；操作日志、备份工具标记和旧配置目录保留双读兼容。测试侧修复 Windows 下 SQLite 句柄泄漏与默认编码假设，并修正清理事务回滚的索引错误。本条目随更名提交一并入库（更名前基线 HEAD 72ff756），验证为全量 149 项通过（跳过 19 项）。回退：按本条目涉及的包名、文件名和配置键恢复旧形态即可回到 72ff756 的行为，数据兼容标识不随回退改变。
 
+- 2026-10-29：DSH 压缩会话读取不再依赖系统库搜索是否走运。libzstd 定位改为有序候选：显式环境变量 `AGENT_SESSION_MANAGER_ZSTD`／`DSH_ZSTD_LIBRARY`／`ZSTD_LIBRARY` → 系统库搜索 → PATH 项及其父目录下的 `mingw64/bin`、`usr/bin` → 常见 Git／conda 安装位置；逐个尝试加载，全失败才报一条安装提示并列出前三条失败原因。本机命中 `D:\Git\mingw64\bin\libzstd.dll`（1.5.7），DSH 扫描从 12 条阻断恢复为 12 个会话、0 问题。同时按官方 master 复核 DSH_FORMAT.md：补压缩开关与「官方不提供删除 API、日志只增不减」的定位依据、`agent/inbox/spliced` 不计入消息面、投影缓存无淘汰策略、Windows 命名内核信号量语义，并把 zstd 查找顺序写进文档。验证：全量 151 项通过（跳过 17 项，均为仅 Linux 的删除／回滚契约与本机不支持符号链接）。回退：恢复 DSH_FORMAT.md、README.md、README.en.md、applications/dsh_format.py、tests/test_dsh_application.py 到 92e94ad 即可回到旧行为。
+

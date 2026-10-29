@@ -6,7 +6,9 @@ from __future__ import annotations
 import ctypes as C
 import ctypes.util
 import json
+import os
 import re
+import sys
 from pathlib import Path
 from functools import lru_cache
 
@@ -17,23 +19,86 @@ CHUNK = 64 * 1024
 class Buffer(C.Structure):
     _fields_ = [("data", C.c_void_p), ("size", C.c_size_t), ("pos", C.c_size_t)]
 
+def zstd_candidates():
+    """Ordered places to look for libzstd, most explicit first.
+
+    find_library() alone is not enough: on stock Windows it returns None even when
+    Git for Windows, conda, or a portable install ships a loadable libzstd.dll that
+    is never on PATH. Candidates that do not exist are skipped without failing.
+    """
+    for variable in ("AGENT_SESSION_MANAGER_ZSTD", "DSH_ZSTD_LIBRARY", "ZSTD_LIBRARY"):
+        value = os.environ.get(variable, "").strip()
+        if value:
+            yield variable, value
+    located = ctypes.util.find_library("zstd")
+    if located:
+        yield "system library search", located
+    names = ("libzstd.dll",) if os.name == "nt" else ("libzstd.so.1", "libzstd.so", "libzstd.dylib")
+    directories = []
+    for entry in os.environ.get("PATH", "").split(os.pathsep):
+        entry = entry.strip()
+        if not entry:
+            continue
+        directories.append(entry)
+        if os.name == "nt":
+            # Git for Windows keeps libzstd in mingw64/bin while only cmd/ is on PATH.
+            root = os.path.dirname(entry.rstrip("\\/"))
+            directories.extend((os.path.join(root, "mingw64", "bin"), os.path.join(root, "usr", "bin")))
+    if os.name == "nt":
+        for variable in ("ProgramFiles", "ProgramW6432", "ProgramFiles(x86)"):
+            root = os.environ.get(variable, "").strip()
+            if root:
+                directories.extend((os.path.join(root, "Git", "mingw64", "bin"), os.path.join(root, "Git", "usr", "bin")))
+        for variable in ("CONDA_PREFIX", "MAMBA_PREFIX", "USERPROFILE", "LOCALAPPDATA"):
+            root = os.environ.get(variable, "").strip()
+            if root:
+                directories.extend((os.path.join(root, "Library", "bin"), os.path.join(root, "miniconda3", "Library", "bin"), os.path.join(root, "anaconda3", "Library", "bin"), os.path.join(root, "Miniconda3", "Library", "bin")))
+    else:
+        directories.extend((os.path.join(sys.prefix, "lib"), "/usr/local/lib", "/usr/lib/x86_64-linux-gnu", "/usr/lib/aarch64-linux-gnu", "/usr/lib64", "/usr/lib", "/lib"))
+    seen = set()
+    for directory in directories:
+        if not directory or directory in seen:
+            continue
+        seen.add(directory)
+        for name in names:
+            candidate = os.path.join(directory, name)
+            if os.path.isfile(candidate):
+                yield candidate, candidate
+
 @lru_cache(maxsize=1)
 def zstd_library():
-    name = ctypes.util.find_library("zstd")
-    if not name:
-        raise ValueError("Zstandard runtime unavailable; install libzstd in your selected environment.")
-    lib = C.CDLL(name)
-    lib.ZSTD_createDStream.restype = C.c_void_p
-    lib.ZSTD_initDStream.argtypes = [C.c_void_p]
-    lib.ZSTD_initDStream.restype = C.c_size_t
-    lib.ZSTD_decompressStream.argtypes = [C.c_void_p, C.POINTER(Buffer), C.POINTER(Buffer)]
-    lib.ZSTD_decompressStream.restype = C.c_size_t
-    lib.ZSTD_freeDStream.argtypes = [C.c_void_p]
-    lib.ZSTD_isError.argtypes = [C.c_size_t]
-    lib.ZSTD_isError.restype = C.c_uint
-    lib.ZSTD_getErrorName.argtypes = [C.c_size_t]
-    lib.ZSTD_getErrorName.restype = C.c_char_p
-    return lib
+    attempts, failures = [], []
+    for origin, candidate in zstd_candidates():
+        attempts.append(candidate)
+        try:
+            lib = C.CDLL(candidate)
+            lib.ZSTD_createDStream.restype = C.c_void_p
+            lib.ZSTD_initDStream.argtypes = [C.c_void_p]
+            lib.ZSTD_initDStream.restype = C.c_size_t
+            lib.ZSTD_decompressStream.argtypes = [C.c_void_p, C.POINTER(Buffer), C.POINTER(Buffer)]
+            lib.ZSTD_decompressStream.restype = C.c_size_t
+            lib.ZSTD_freeDStream.argtypes = [C.c_void_p]
+            lib.ZSTD_isError.argtypes = [C.c_size_t]
+            lib.ZSTD_isError.restype = C.c_uint
+            lib.ZSTD_getErrorName.argtypes = [C.c_size_t]
+            lib.ZSTD_getErrorName.restype = C.c_char_p
+        except (OSError, AttributeError) as error:
+            failures.append(f"{candidate}: {error}")
+            continue
+        return lib
+    detail = "; ".join(failures[:3]) if failures else "no candidate found"
+    raise ValueError(
+        "Zstandard runtime unavailable; install libzstd, put it on PATH, "
+        "or point AGENT_SESSION_MANAGER_ZSTD at the library file (" + detail + ")"
+    )
+
+def zstd_available():
+    """True when compressed DSH logs can be read in this process."""
+    try:
+        zstd_library()
+    except (OSError, ValueError):
+        return False
+    return True
 
 def chunks(path: Path):
     if not path.name.endswith(".zstd"):

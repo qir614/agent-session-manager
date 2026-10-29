@@ -105,7 +105,7 @@ Cleanup is implemented locally: scanning, dependency planning, file/SQLite delet
 
 ## DSH support
 
-Choose `codex` or `dsh` in the GUI, or pass `--app dsh` to the CLI. `--home` overrides `DSH_HOME`; `--sessions-root` selects a custom persistence directory. The shipped composition uses HOME/sessions. DSH v4 supports browsing, projects, exports and independent Linux cleanup with kernel locks and local rollback. Shared attachments and projects are preserved. Historical/new formats are inspection/export only. Compressed reads need libzstd in the selected environment; Windows DSH deletion is not enabled. See [DSH_FORMAT.md](DSH_FORMAT.md) for official sources, guarantees and limits.
+Choose `codex` or `dsh` in the GUI, or pass `--app dsh` to the CLI. `--home` overrides `DSH_HOME`; `--sessions-root` selects a custom persistence directory. The shipped composition uses HOME/sessions. DSH v4 supports browsing, projects, exports and independent Linux cleanup with kernel locks and local rollback. Shared attachments and projects are preserved. Historical/new formats are inspection/export only. Compressed reads need libzstd but never DSH or Node: the reader checks `AGENT_SESSION_MANAGER_ZSTD` (also `DSH_ZSTD_LIBRARY`, `ZSTD_LIBRARY`), then the system library search, then common Git/conda install locations derived from PATH, and only reports an install hint when nothing loads; raw NDJSON sessions are unaffected. Windows DSH deletion is not enabled. See [DSH_FORMAT.md](DSH_FORMAT.md) for official sources, guarantees and limits.
 
 ```bash
 python -B run_cli.py --app dsh scan
