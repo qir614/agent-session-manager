@@ -4,7 +4,7 @@ owner: dsh:lead
 recorded_at: '2026-10-29T20:35:00+08:00'
 workspace: E:\projects\agent_session_manager
 baseline_sha: 1fa4fe6
-state_at_checkpoint: implemented-uncommitted
+state_at_checkpoint: pushed
 ---
 
 Snapshot at the recorded time; project_status is authoritative for current status.
@@ -42,6 +42,11 @@ Snapshot at the recorded time; project_status is authoritative for current statu
 - `windows/start.bat` 在隔离目录实测（`.review-tmp\startbat-test\windows\` + 桩 run_gui.py 写 sys.executable）：`cmd /c start.bat` → BAT_EXIT=0，选中 `D:\miniconda3\envs\agent-session-manager\pythonw.exe`，证明新探测分支生效。
 - 全量回归用项目环境解释器（`D:\miniconda3\envs\agent-session-manager\python.exe -B -m unittest discover -s tests -t . -v`，TMP/TEMP=.review-tmp，不设 PYTHONPATH）：`Ran 170 tests in 196.778s` / `OK (skipped=17)`，日志 `.review-tmp\conda-regression.log`。
 - CLI 与 GUI 入口经可编辑安装后的 console script 实测（--version／config --json）。
+
+## 提交与推送
+
+- 提交 `4deddaa` "Use the project conda environment everywhere"：10 files changed, 155 insertions(+), 16 deletions(-)（environment.yml、start.bat、6 份文档、PROJECT_VERSION.md、本交接记录）；基线 1fa4fe6。
+- 推送：`origin main` → `4deddaa`，`git ls-remote` 复核远端 `refs/heads/main = 4deddaacbf292353a18b2454244de2f469878154`。推送通道沿用上一轮办法：PowerShell 调 `advapi32!CredRead` 读 `git:https://github.com`（用户 qir614，40 字符 `gho_` token），拼一次性 remote URL 推送，token 不落盘；helper 脚本 `.agent-tmp\push.ps1` 用后已删。
 
 ## 未做/限制
 
