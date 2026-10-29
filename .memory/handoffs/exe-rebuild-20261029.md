@@ -4,7 +4,7 @@ owner: dsh:lead
 recorded_at: '2026-10-29T20:55:00+08:00'
 workspace: E:\projects\agent_session_manager
 baseline_sha: f119e3a
-state_at_checkpoint: implemented
+state_at_checkpoint: pushed
 ---
 
 Snapshot at the recorded time; project_status is authoritative for current status.
@@ -74,6 +74,11 @@ WIN cls=PyInstallerOnefileHiddenWindow vis=False text=[PyInstaller Onefile Hidde
 - `windows/build.ps1`：`build.ps1:372-382` 改为 `Invoke-Native` + 回放输出 + 按 ExitCode 判定。
 - `windows/README.md`：新增「脚本实际做了什么」第 6 条（所有原生命令走 `Invoke-Native`，重定向下 stderr 会中止构建）；「## 已验证状态」改写为本轮实测（含字节数、SHA256、版本资源）并补 TMP/`_MEI*` 限制说明。
 - `PROJECT_VERSION.md`：追加第 26 条（重定向中止构建的根因、修复、实测数据、回退到 f119e3a）。
+
+## 提交与推送
+
+- 提交 `cbf7a24` "Fix the Windows build aborting when its output is redirected"：4 files changed, 95 insertions(+), 3 deletions(-)（`windows/build.ps1`、`windows/README.md`、`PROJECT_VERSION.md`、本交接记录）；基线 f119e3a。
+- 推送：`f119e3a..cbf7a24  main -> main`，`git ls-remote origin refs/heads/main` = `cbf7a2450d5e65de1444be876501d55316c31845`；本地 `refs/remotes/origin/main` 已用 `git update-ref` 同步，`git status -sb` 显示 `## main...origin/main` 无 ahead。推送通道同上一轮：PowerShell `Add-Type` 定义 `CredReadW`/`CredFree` 读 `git:https://github.com` 的 `gho_` token，拼一次性 remote URL，token 不落盘；脚本 `.agent-tmp\push3.ps1` 用后已删。**注意：`git` 调用必须带 `-c safe.directory=E:/projects/agent_session_manager`，否则报 `fatal: detected dubious ownership`。**
 
 ## 未做/限制
 
