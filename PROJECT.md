@@ -8,7 +8,7 @@
 
 固定项目根：E:\projects\agent_session_manager\（Windows 主机；产品、仓库与本地检出目录均已更名为 Agent Session Manager／agent-session-manager，旧路径 E:\projects\codex-local-session-cleaner 不再存在）。项目内的隔离工作树、报告、恢复材料和临时文件均留在该目录。不得改动其他检出或旧工作树。
 
-Windows 验证使用 DSH 自带 Python：C:\Users\qir\.dsh\dsh-runtimes\dsh-next-primary-runtime\dependencies\python\python.exe（含 Tcl/Tk 8.6），设置 PYTHONPATH=src、TMP/TEMP=<项目根>\.review-tmp 并以 -B 运行。Linux 回归继续使用已有 conda 环境 codex-cleaner；若确需其他环境，只能经授权使用 conda；不安装系统或全局 Python 依赖。大型产物放磁盘，不将代码、数据库或大体积测试夹具放入系统临时目录。
+Windows 验证使用 DSH 自带 Python：C:\Users\qir\.dsh\dsh-runtimes\dsh-next-primary-runtime\dependencies\python\python.exe（含 Tcl/Tk 8.6），设置 PYTHONPATH=src、TMP/TEMP=<项目根>\.review-tmp 并以 -B 运行。Linux 回归使用已有的带 Tcl/Tk 的 conda 环境（当前 Linux 主机上名为 codex-cleaner，属旧项目名遗留，尚未在本机验证改名）；若确需其他环境，只能经授权使用 conda；不安装系统或全局 Python 依赖。Windows 的 EXE 构建使用项目专属 conda 环境 agent-session-manager（D:\miniconda3\envs\agent-session-manager，已装 PyInstaller 6.22.3，可离线构建），构建入口见 windows/README.md。大型产物放磁盘，不将代码、数据库或大体积测试夹具放入系统临时目录。
 
 ## 架构
 
@@ -22,13 +22,13 @@ Python 共享逻辑位于 src/agent_session_manager；applications 分离 Codex 
 
 ## 验证与记录
 
-Windows 回归入口（项目根目录，使用上面的自带 Python）：设置 PYTHONPATH=src、TMP/TEMP=<项目根>\.review-tmp 后运行 python -B -m unittest discover -s tests -t . -v。Linux 回归入口：激活现有 codex-cleaner 环境后执行 bash linux/test.sh -q（或 PATH=/home/qir/miniconda3/envs/codex-cleaner/bin:$PATH）。临时目录必须位于项目内且已存在，命令使用 -B 避免生成 Python 缓存。测试应覆盖删除范围、保留对象、未知结构阻止、预览变化及失败恢复。GUI 行为改变时还需实际打开核对。
+Windows 回归入口（项目根目录，使用上面的自带 Python）：设置 PYTHONPATH=src、TMP/TEMP=<项目根>\.review-tmp 后运行 python -B -m unittest discover -s tests -t . -v。Linux 回归入口：激活带 Tcl/Tk 的 conda 环境后执行 bash linux/test.sh -q（当前 Linux 主机上的环境名仍为 codex-cleaner，或 PATH=/home/qir/miniconda3/envs/codex-cleaner/bin:$PATH）。临时目录必须位于项目内且已存在，命令使用 -B 避免生成 Python 缓存。测试应覆盖删除范围、保留对象、未知结构阻止、预览变化及失败恢复。GUI 行为改变时还需实际打开核对。
 
 任务记录留在项目 .memory 和协调记录中；格式依据见 THREAD_FORMAT.md、DSH_FORMAT.md，审查及测试证据留在 reports。PROJECT_VERSION.md 保留简短版本和恢复记录。仅清理已确认归属且不再需要的本任务临时产物。
 
 ## Git 与恢复
 
-保留既有未提交内容。修改前保护直接涉及的当前文件；当前 HEAD 不代表尚未提交的版本已获保护。任务提交只包含本任务差异；文件混有此前修改时，不将整文件计入本任务，不自动暂存、重置或强制清理。推送和合并另需授权。
+保留既有未提交内容。修改前保护直接涉及的当前文件；当前 HEAD 不代表尚未提交的版本已获保护。任务提交只包含本任务差异；文件混有此前修改时，不将整文件计入本任务，不自动暂存、重置或强制清理。用户已授权常规提交与推送（旧会话 seq 1792「该提交git就要提交git，不用问我」、m01139「都由你来决定吧」）；强制推送、改写历史与并入他人分支仍需单独确认。
 
 ## 官方依据
 

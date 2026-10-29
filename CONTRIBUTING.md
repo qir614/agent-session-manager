@@ -4,7 +4,7 @@ Contributions are welcome, especially synthetic compatibility fixtures for newer
 
 ## Development
 
-Linux: activate the existing `codex-cleaner` conda environment and run `bash linux/test.sh -v`. Temporary fixtures stay under the project's `.review-tmp/`. Launch with `bash linux/start.sh`.
+Linux: activate a conda environment that provides Tcl/Tk (named `codex-cleaner` on the current Linux host) and run `bash linux/test.sh -v`. Temporary fixtures stay under the project's `.review-tmp/`. Launch with `bash linux/start.sh`.
 
 Windows instructions, launcher and build script live in [windows/README.md](windows/README.md).
 

@@ -8,7 +8,7 @@ A Linux and Windows viewer, archive, backup, and privacy cleaner for Codex local
 
 ## Run on your operating system
 
-- Linux: activate the existing `codex-cleaner` conda environment, then run `bash linux/start.sh`. See [linux/README.md](linux/README.md).
+- Linux: activate a conda environment that provides Tcl/Tk (named `codex-cleaner` on the current Linux host), then run `bash linux/start.sh`. See [linux/README.md](linux/README.md).
 - Windows: run `windows/start.bat`, or download the EXE from Releases. See [windows/README.md](windows/README.md).
 
 Platform launchers and documentation are separate. Shared Python entry points remain `run_gui.py` and `run_cli.py`.
@@ -106,7 +106,7 @@ python run_cli.py recover
 python run_cli.py recover PATH/TO/.cleaner-transaction_... --force
 ```
 
-Build the EXE with `.\windows\build.ps1 -Clean`. Run tests with `python -m unittest discover -s tests -v`. Tests use isolated fixtures or temporary consistent copies and never delete real conversations. The tool does not upload sessions or expose credentials from `auth.json`.
+Build the EXE with `.\windows\build.ps1 -Clean`; on Windows the dedicated conda environment `agent-session-manager` already has PyInstaller and builds offline: `.\windows\build.ps1 -Clean -Python D:\miniconda3\envs\agent-session-manager\python.exe`. See [windows/README.md](windows/README.md). Run tests with `python -m unittest discover -s tests -v`. Tests use isolated fixtures or temporary consistent copies and never delete real conversations. The tool does not upload sessions or expose credentials from `auth.json`.
 
 ## License
 

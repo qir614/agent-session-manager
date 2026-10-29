@@ -4,10 +4,14 @@
 
 ## 启动
 
-使用已经存在的 `codex-cleaner` conda 环境；脚本不创建环境、不安装依赖。
+需要一个带 Tcl/Tk 的 Python 3.11+ 环境；脚本不创建环境、不安装依赖。当前 Linux 主机上现成的 conda 环境名为 `codex-cleaner`（旧项目名遗留），继续使用它即可。先确认环境可用：
 
 ```bash
-cd /run/media/qir/5421-82AF/projects/agent-session-manager
+python -c "import tkinter; print(tkinter.TkVersion)"
+```
+
+```bash
+cd /path/to/agent-session-manager
 conda activate codex-cleaner
 bash linux/start.sh
 ```
@@ -27,7 +31,7 @@ bash linux/cli.sh scan
 
 优先选择本机可用的 Noto 中文、文泉驿等字体，使用 Linux 的 Clam 控件主题，不再使用容易缺字的文件夹表情符号。窗口以 1420×900 为基准，控件 12 磅、正文 13 磅；放大时字号自动增大，控件最大 28 磅，标题、正文、行高和列宽同步变化，还原窗口时恢复。Linux 通过程序专用 `fonts.conf` 和基础 Tk 缩放统一为 96 DPI，避免桌面 Xft DPI 与窗口字号缩放重复叠加；不修改系统字体设置。
 
-若当前 conda Tk 是 noxft 构建，无法使用系统 TrueType 字体，可在现有 `codex-cleaner` 环境中准备项目内的 Xft 渲染库：
+若当前 conda Tk 是 noxft 构建，无法使用系统 TrueType 字体，可在这个已激活的环境中准备项目内的 Xft 渲染库：
 
 ```bash
 python -B linux/prepare_fonts.py

@@ -10,7 +10,7 @@ Agent Session Manager（智能体会话管理器）是支持 Codex 与 DSH 的�
 
 | 系统 | 专属目录 | 启动入口 | 使用说明 |
 | --- | --- | --- | --- |
-| Linux | `linux/` | 激活现有 `codex-cleaner` 环境后运行 `bash linux/start.sh` | [Linux 说明](linux/README.md) |
+| Linux | `linux/` | 激活已装好 Tcl/Tk 的 conda 环境（本机现名 `codex-cleaner`）后运行 `bash linux/start.sh` | [Linux 说明](linux/README.md) |
 | Windows | `windows/` | 双击 `windows/start.bat` | [Windows 说明](windows/README.md) |
 
 根目录的 `run_gui.py`、`run_cli.py` 是共享 Python 入口；平台脚本只负责启动，扫描、清理、备份逻辑只有一套。
@@ -196,7 +196,13 @@ CLI 的 `backup` 创建只含选中父子树的会话归档包。`delete` 默认
 
 Windows EXE 构建只在 [windows/](windows/README.md) 中维护。Linux 当前直接从源码启动，不使用 EXE 构建流程。
 
-Linux 本地回归测试使用现有 `codex-cleaner` 环境，执行 `bash linux/test.sh -q`；临时数据放在项目磁盘目录 `.review-tmp/`。平台专属测试分别位于 `tests/linux/` 和 `tests/windows/`，不适用的平台测试会跳过。
+Windows 上推荐用项目专属 conda 环境构建，它已装好 PyInstaller，可以离线完成：
+
+```powershell
+.\windows\build.ps1 -Clean -Python D:\miniconda3\envs\agent-session-manager\python.exe
+```
+
+Linux 本地回归测试使用已装好 Tcl/Tk 的 conda 环境（本机现名 `codex-cleaner`），执行 `bash linux/test.sh -q`；临时数据放在项目磁盘目录 `.review-tmp/`。平台专属测试分别位于 `tests/linux/` 和 `tests/windows/`，不适用的平台测试会跳过。
 
 测试只使用临时构造的数据或真实数据库的临时一致性副本，不删除真实会话。工具不联网、不上传会话，也不会读取或输出 `auth.json` 中的凭据内容。
 

@@ -75,3 +75,7 @@ Snapshot at the recorded time; project_status is authoritative for current statu
 - 移植内容：新增 recovery.py（operation.json 检查点 + pending_transactions 闸门 + check_recovery 冲突检测）与 cleanup_safety.py（删除后重扫 rollout 身份/索引/历史/全局状态/未声明 SQLite 列）；executor 每个阶段写检查点并支持 recover_transaction；restore_backup 增加清理后基线比对与 --overwrite-conflicts；backup.py 原子写 manifest、校验写入范围、拒绝重复条目、恢复后复验哈希、逐文件 fsync（Windows 尽力而为）；CLI 新增 recover 子命令、main() 错误边界加宽到 OSError/RuntimeError/ValueError；GUI 新增「事务恢复」按钮（仅 Codex 应用可用）。
 - 新增测试 tests/test_recovery.py（12 项，含子进程 os._exit(23) 模拟强制退出）与 tests/test_cleanup_safety.py（6 项）。全量 170 项通过（跳过 17 项）。
 - 临时目录未删（用户尚未要求）：.agent-tmp（含旧会话解码副本、移植蓝本、决策脚本）与 .review-tmp（测试日志与 HEAD 导出）均为 git 忽略、不入库。
+
+## Windows 打包链路重写（2026-10-29 晚）
+
+`windows/build.ps1` 在本机整体不可用（$ErrorActionPreference 把原生 stderr 升级为终止错误、只认官方 CPython 的 Tcl/Tk 布局、相对路径 + 缺 --hidden-import sqlite3、隐藏窗口烟测必然超时），已整体重写并首次真正构建出可运行 EXE：`dist\AgentSessionManager.exe` 13,417,540 字节，SHA256 09CE0BA2D72A36562F093C9C0E8B9054BD2F8D14DD7E7B546F7A3DB38FBA8648，内置归档校验与 GUI 烟测通过；全量 170 项测试通过（跳过 17 项）。构建使用项目专属 conda 环境 `D:\miniconda3\envs\agent-session-manager`（Python 3.11.18、PyInstaller 6.22.3）。详见 `.memory/handoffs/windows-exe-build-20261029.md`。
