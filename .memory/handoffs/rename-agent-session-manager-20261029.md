@@ -58,3 +58,10 @@ Snapshot at the recorded time; project_status is authoritative for current statu
 - 提交前最终验收：全量 unittest Ran 149 tests, OK (skipped=19)，exit 0；提交后又从未提交工作树导出的 HEAD 树（95 文件）重跑同一命令，同样 Ran 149 tests, OK (skipped=19)，确认已入库内容自洽；compileall exit 0；CLI --version/--help/config --json 与 GUI 标题烟测通过。
 - reports/ 含真实会话标识，加入 .gitignore 并保留在磁盘作为本地证据，不入库。
 - origin 仍为旧仓库 URL，push 未执行（无外网，且推送需另行授权）。
+
+## 后续提交（2026-10-29 12:0x–12:5x +08:00）
+
+- 0a6cdf2 "Harden libzstd discovery for DSH compressed logs"（6 files）：libzstd 改为有序候选查找（环境变量 AGENT_SESSION_MANAGER_ZSTD／DSH_ZSTD_LIBRARY／ZSTD_LIBRARY → 系统库搜索 → PATH 项及其父目录下的 mingw64/bin、usr/bin → Windows 常见 Git/conda 位置），新增 zstd_available()；本机命中 D:\Git\mingw64\bin\libzstd.dll（1.5.7），`--app dsh scan` 从 12 条 BLOCK 恢复为 12 会话 0 问题。同步复核 DSH_FORMAT.md（投影缓存无淘汰策略须随会话同删、agent/inbox/spliced 不计入消息面、POSIX 锁语义）与中英文 README。全量 151 项通过（跳过 17）。
+- 6692752 "Report unreadable sessions instead of tracebacks"（4 files）：cli.py 拆出 _dispatch() 并在 main() 加 ValueError 边界，统一单行原因 + 退出 2；show --messages 与 plan/delete 就地提示；新增 test_cli_reports_unreadable_session_instead_of_traceback（截断 Zstd 会话）；修正 DSH_FORMAT.md 中「旧包名与 CLI 入口保留兼容」的过期说法。全量 152 项通过（跳过 17），真机截断副本复核 show/plan 均返回 2。
+- 清理：git worktree prune -v 移除两条 prunable 元数据（旧 Linux 路径），删除本地陈旧工作树副本 .worktrees\fix-cleanup-review-20261023（80 文件，无独有内容）；分支 refs 全部保留。
+- 仍未做（需用户决定）：push、GitHub 仓库改名、origin URL 变更、codex/linux-cleanup-safety 是否移植、临时目录（.agent-tmp、.review-tmp 内容、reports/）是否清理。
