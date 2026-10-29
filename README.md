@@ -15,6 +15,8 @@ Agent Session Manager（智能体会话管理器）是支持 Codex 与 DSH 的�
 
 根目录的 `run_gui.py`、`run_cli.py` 是共享 Python 入口；平台脚本只负责启动，扫描、清理、备份逻辑只有一套。
 
+Windows 上的 `windows/start.bat` 会自动探测带 Tcl/Tk 的 Python（跳过 Microsoft Store 的 `WindowsApps` 存根），失败时可用 `set ASM_PYTHON=<python.exe 完整路径>` 指定解释器。
+
 ## 项目结构
 
 ```text

@@ -4,7 +4,9 @@
 
 ## 启动
 
-普通用户可以从仓库 Releases 下载 `AgentSessionManager.exe` 和 `.sha256` 校验文件后直接运行。源码用户双击 `windows/start.bat`；它从项目根目录查找 EXE、`dist` 中的 EXE，再使用 `py -3` 或 `python` 运行共享入口 `run_gui.py`。
+普通用户可以从仓库 Releases 下载 `AgentSessionManager.exe` 和 `.sha256` 校验文件后直接运行。源码用户双击 `windows/start.bat`；它从项目根目录查找 EXE、`dist` 中的 EXE，找不到时依次探测可用的 Python：`ASM_PYTHON` 环境变量、`py -3`、PATH 上的 `python.exe`、各盘符与 `%LOCALAPPDATA%\Programs\Python` 下的 conda/官方安装，用 `import tkinter` 实际验证后以 `pythonw.exe` 启动共享入口 `run_gui.py`。
+
+Microsoft Store 的 `WindowsApps\python.exe` 是占位存根，执行会静默失败且退出码为 9009，脚本会跳过它。若自动探测失败，把可用解释器的完整路径写入 `ASM_PYTHON` 再运行即可。
 
 源码运行需要带 Tcl/Tk 的 Python 3.11+。如果出现 `Can't find a usable init.tcl`，使用带完整 Tcl/Tk 的 Python 运行库或已打包的 EXE。
 

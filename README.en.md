@@ -13,6 +13,8 @@ A Linux and Windows viewer, archive, backup, and privacy cleaner for Codex local
 
 Platform launchers and documentation are separate. Shared Python entry points remain `run_gui.py` and `run_cli.py`.
 
+On Windows, `windows/start.bat` probes for a Python with Tcl/Tk (skipping the Microsoft Store `WindowsApps` stub) and falls back to `set ASM_PYTHON=<full path to python.exe>` when detection fails.
+
 ## What the interface shows
 
 The tree uses Codex's own `local-projects`, `thread-project-assignments`, and sidebar order before falling back to rollout `cwd`. Explicit renamed titles take precedence in this order:
