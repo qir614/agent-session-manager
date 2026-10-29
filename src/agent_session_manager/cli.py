@@ -153,7 +153,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
+def _dispatch(argv: list[str] | None) -> int:
     args = build_parser().parse_args(argv)
     application = get_application(args.app)
     args.codex_home = args.codex_home or application.default_home()
@@ -277,7 +277,11 @@ def main(argv: list[str] | None = None) -> int:
             "warnings": record.warnings,
         }
         if args.messages and record.path is not None:
-            details = application.read(record, include_internal=args.internal)
+            try:
+                details = application.read(record, include_internal=args.internal)
+            except ValueError as exc:
+                print(f"Cannot read session {record.id}: {exc}", file=sys.stderr)
+                return 2
             payload["messages"] = [
                 {"role": item.role, "timestamp": item.timestamp, "text": item.text}
                 for item in details.messages
@@ -304,8 +308,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Completed: {args.command} {args.id}")
         return 0
 
-    plan = application.plan(scan, args.ids)
-    impact = application.impact(scan, plan)
+    try:
+        plan = application.plan(scan, args.ids)
+        impact = application.impact(scan, plan)
+    except ValueError as exc:
+        print(f"Cannot plan cleanup: {exc}", file=sys.stderr)
+        return 2
     if args.command == "plan":
         if args.as_json:
             print(json.dumps({
@@ -358,6 +366,14 @@ def main(argv: list[str] | None = None) -> int:
     if report.manifest_path:
         print(f"Manifest: {report.manifest_path}")
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    try:
+        return _dispatch(argv)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

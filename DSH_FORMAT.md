@@ -16,7 +16,7 @@
 
 ## 功能和事务
 
-共享应用接口位于 `applications/`；OS 接口仍位于 `platforms/`。Codex 使用原实现，DSH 使用独立适配器，模型携带 application 标识，拒绝混用执行器。旧 Python 包名与 CLI 入口保留兼容。
+共享应用接口位于 `applications/`；OS 接口仍位于 `platforms/`。Codex 使用原实现，DSH 使用独立适配器，模型携带 application 标识，拒绝混用执行器。更名后旧 Python 包名与旧 CLI 入口已移除，保留的只有数据层兼容（备份工具标记、操作日志文件名、旧配置目录名）。读取或清理计划失败时 CLI 打印单行原因并退出 2，不再抛裸 traceback；界面在异步线程内转为错误对话框。
 
 - 当前支持 v4 的扫描、项目分组、标题、消息阅读、导出与 Linux 本地清理；旧版本或新版本显示为未知，只读导出，不降级读取较旧文件来获得删除权限。
 - v4 头部的 delegationDepth 可省略；提供时必须是非负整数，布尔值、null、字符串及负数拒绝。依据本机 dsh-session 的 SessionHeader 类型和 canonicalHeader 验证；不自动补写或升级原文件。

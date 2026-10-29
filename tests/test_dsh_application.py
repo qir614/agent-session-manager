@@ -206,6 +206,20 @@ class DshApplicationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Truncated|Corrupt"):
                 list(rows(path))
 
+    @unittest.skipUnless(HAS_ZSTD, "libzstd is an optional runtime")
+    def test_cli_reports_unreadable_session_instead_of_traceback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp); fixture(home, compressed=True)
+            path = home / "sessions/project" / ROOT / "session.v4.jsonl.zstd"
+            data = path.read_bytes()
+            path.write_bytes(data[:-64])
+            capture, errors = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(capture), contextlib.redirect_stderr(errors):
+                code = main(["--app", "dsh", "--home", str(home), "show", ROOT, "--messages"])
+            self.assertEqual(code, 2)
+            self.assertIn("Cannot read session", errors.getvalue())
+            self.assertEqual(capture.getvalue(), "")
+
     def test_unknown_workspace_references_block_plan(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp); fixture(home)
