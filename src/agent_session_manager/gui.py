@@ -17,7 +17,7 @@ from .cli import format_bytes
 from .codex_controller import CodexController
 from .conversation_reader import ConversationDetails, read_conversation
 from .applications import get_application
-from .executor import CleanupExecutor, restore_backup
+from .executor import CleanupExecutor, recover_transaction, restore_backup
 from .impact_analyzer import analyze_deletion
 from .models import SessionStatus
 from .orphan_cleaner import execute_orphan_cleanup, scan_orphans
@@ -26,6 +26,7 @@ from .planner import build_plan
 from .platforms import get_platform
 from .process_guard import running_codex_processes
 from .projects import ProjectInfo, project_info
+from .recovery import pending_transactions
 from .scanner import SessionScanner, default_codex_home
 from .settings import AppSettings, load_settings, save_settings
 
@@ -422,6 +423,8 @@ class CleanerApp(tk.Tk):
         ttk.Button(toolbar, text="备份管理", command=self.open_backup_manager).pack(side="left", padx=(8, 0))
         self.orphan_button = ttk.Button(toolbar, text="历史残留清理", command=self.scan_legacy_orphans, state="normal" if self.application.id == "codex" else "disabled")
         self.orphan_button.pack(side="left", padx=(8, 0))
+        self.recovery_button = ttk.Button(toolbar, text="事务恢复", command=self.open_transaction_recovery, state="normal" if self.application.id == "codex" else "disabled")
+        self.recovery_button.pack(side="left", padx=(8, 0))
 
         filters = ttk.Frame(self, padding=(12, 4, 12, 8))
         filters.pack(fill="x")
@@ -559,7 +562,7 @@ class CleanerApp(tk.Tk):
             self.home_var.set(str(self.application.default_home()))
         self.session_root_var.set(self.settings.dsh_session_root if self.application.id == "dsh" else "")
         self.session_root_entry.configure(state="normal" if self.application.id == "dsh" else "disabled")
-        for button in (self.orphan_button, self.compact_button):
+        for button in (self.orphan_button, self.recovery_button, self.compact_button):
             button.configure(state="normal" if self.application.id == "codex" else "disabled")
         self.current_id = None
         self.scan_result = None
@@ -1089,6 +1092,44 @@ class CleanerApp(tk.Tk):
         label = self.application.label
         self.process_var.set(f"{label} 运行中：{', '.join(running)}" if running else f"{label} 已关闭：允许清理")
         self.after(3000, self._refresh_process_status)
+
+    def open_transaction_recovery(self) -> None:
+        home = Path(self.home_var.get()).expanduser()
+        try:
+            pending = pending_transactions(home)
+        except OSError as exc:
+            self._error("无法读取事务目录", exc)
+            return
+        if not pending:
+            messagebox.showinfo("事务恢复", f"在 {home} 没有发现未完成事务。")
+            return
+        listing = "\n".join(path.name for path in pending[:8]) + ("\n…" if len(pending) > 8 else "")
+        if len(pending) == 1:
+            selected = pending[0]
+        else:
+            messagebox.showinfo(
+                "发现未完成事务",
+                f"发现 {len(pending)} 个中断的事务目录，请选择要恢复的一个：\n\n{listing}",
+            )
+            chosen = filedialog.askdirectory(initialdir=str(home), title="选择未完成的 .cleaner-transaction_ 或 .cleaner-restore- 目录")
+            if not chosen:
+                return
+            selected = Path(chosen)
+        if simpledialog.askstring(
+            "恢复未完成事务",
+            f"将按 {selected.name} 中记录的基线恢复文件，当前文件与该基线不同时会停止。\n\n输入 RECOVER 继续：",
+            parent=self,
+        ) != "RECOVER":
+            return
+
+        def work() -> int:
+            return recover_transaction(selected, home, force=True)
+
+        def done(count: int) -> None:
+            messagebox.showinfo("恢复完成", f"已恢复 {count} 个文件。")
+            self.refresh()
+
+        self._run_async("正在恢复未完成事务…", work, done)
 
     def open_backup_manager(self) -> None:
         window = tk.Toplevel(self)

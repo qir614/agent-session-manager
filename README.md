@@ -81,7 +81,7 @@ state.name
 
 ## 删除对话
 
-查看、搜索和创建会话归档可以在 Codex 运行时使用。删除、恢复完整状态快照、删除备份和数据库维护只能在 Codex/ChatGPT 及后台 app-server 完全关闭后执行。
+查看、搜索和创建会话归档可以在 Codex 运行时使用。删除、恢复完整状态快照、恢复未完成事务、删除备份和数据库维护只能在 Codex/ChatGPT 及后台 app-server 完全关闭后执行。
 
 1. 选择一个或多个本地根记录，或直接选择项目行。
 2. 点击 **删除对话及私有数据**。
@@ -106,7 +106,9 @@ state.name
 - 操作日志中直接包含目标线程 ID 的旧记录；新日志只保存不可逆短哈希；
 - 修改过的 SQLite 使用 `secure_delete`、WAL checkpoint、`VACUUM` 和 `quick_check` 清除逻辑文件内的空闲页残留。
 
-工具随后重新查询所有核心表和计划内私有产物。只要任何目标 ID 或独占产物仍然存在，就会判定失败并回滚，而不是显示“删除完成”。操作结果会写入 `.agent-session-manager-operations.jsonl`，只记录线程 ID 的短哈希、各库删除行数和错误类型，不记录消息正文。旧版本使用的 `.codex-local-session-cleaner-operations.jsonl` 仍会被读取、随备份保存并参与旧记录清理，升级不会丢失已写入的删除凭证。
+执行期间在所选 Codex 目录内维护事务快照和 `operation.json` 检查点；进程被强制结束或任一阶段失败时，残留事务会阻止新的规划和删除，直到显式恢复或回滚完成。
+
+工具随后重新查询所有核心表和计划内私有产物，并重扫 `sessions` / `archived_sessions` 下的 rollout 身份、索引与本地输入历史、全局状态和未声明列中的引用。只要任何目标 ID、独占产物或未识别引用仍然存在，就会判定失败并回滚，而不是显示“删除完成”。操作结果会写入 `.agent-session-manager-operations.jsonl`，只记录线程 ID 的短哈希、各库删除行数和错误类型，不记录消息正文。旧版本使用的 `.codex-local-session-cleaner-operations.jsonl` 仍会被读取、随备份保存并参与旧记录清理，升级不会丢失已写入的删除凭证。
 
 顶部 **历史残留清理** 用于处理以前删除对话后留下的孤立附件、可视化、生成图片和线程 UUID 产物。它先做只读扫描，只把超过 7 天、没有任何存活 rollout 或本地目录记录引用、且完全位于受管理 `.codex` 根目录内的项目列为可清理；近期项目、含符号链接或 junction 的目录、无法读取的目录和备份只报告。执行前必须输入 `CLEAN-N`，删除时在所选 Codex 目录的同一文件系统中重命名暂存，不复制附件，也不使用系统 `/tmp`。全部暂存和日志更新成功后直接删除暂存产物，不保留持久备份；跨文件系统的产物会使操作停止并回滚。普通异常或 Ctrl+C 会恢复已移动的原件；恢复失败时保留 `.cleaner-orphan-transaction-*` 目录及 `recovery.json` 清单，并阻止继续清理。强制结束进程或断电不能保证自动恢复，此时应保留该目录，按清单检查和恢复 `data/` 下的原件。操作日志中已失效的原始线程 ID 会脱敏。
 
@@ -140,6 +142,19 @@ state.name
 python run_cli.py restore BACKUP_DIRECTORY --force
 ```
 
+恢复会先比对当前文件与快照记录的清理后基线：快照记录过基线时，当前文件与基线不一致会直接停止，需要额外确认才覆盖；旧版本生成、没有基线记录的快照只在目标文件不存在或哈希一致时写入。
+
+### 中断恢复与恢复冲突
+
+删除和恢复都在 Codex 目录内写一份只增不改的事务快照，并在每个阶段更新 `operation.json` 检查点。进程被强制结束时，残留的 `.cleaner-transaction_` 或 `.cleaner-restore-` 目录会让扫描报出阻止性问题，规划和删除在恢复前全部拒绝执行；界面顶部 **事务恢复** 与命令行 `recover` 都只恢复清单里记录过的文件：
+
+```text
+python run_cli.py recover
+python run_cli.py recover PATH/TO/.cleaner-transaction_... --force
+```
+
+不带目录时列出发现的未完成事务。恢复前会重新校验快照哈希、清单路径和当前文件状态；当前文件与基线不同、或检查点标记为写入未完成时会停止，确认后再加 `--overwrite-conflicts`。缺少 `operation.json` 或完整清单的目录不会被自动处理，需要人工检查。该能力经过进程强制退出测试，但不承诺硬件故障或所有断电情形。
+
 ## 配置与数据兼容
 
 设置文件按系统存放：Windows 为 `%LOCALAPPDATA%\AgentSessionManager\settings.json`，Linux 为 `$XDG_CONFIG_HOME/AgentSessionManager/settings.json`（未设置时使用 `~/.config/AgentSessionManager/settings.json`）。文件顶层包含 `schema_version`，设置分为 `general`、`codex`、`dsh` 三个分区：`general` 保存语言、主题、确认文字、内部消息显示和删除前备份与保留规则；`codex` 保存 Codex 可执行文件与可选的 Codex 数据目录；`dsh` 保存 DSH 数据目录与可选的独立会话根目录。具体字段名以 `src/agent_session_manager/configuration/` 中的配置模块为准，界面与 CLI 共用这份配置。
@@ -169,6 +184,8 @@ python run_cli.py delete <SESSION_ID>
 python run_cli.py delete <SESSION_ID> --apply --confirm DELETE-3
 python run_cli.py compact-logs
 python run_cli.py compact-logs --apply
+python run_cli.py recover
+python run_cli.py recover PATH/TO/.cleaner-transaction_... --force
 ```
 
 CLI 的 `backup` 创建只含选中父子树的会话归档包。`delete` 默认只预览，并输出数据库引用、日志行数和事务快照空间；真正删除仍使用依赖闭包数量形式 `DELETE-N`。图形界面的确认文字由设置控制。

@@ -16,6 +16,7 @@ from .models import (
     SessionStatus,
 )
 from .catalog import latest_index_titles, read_catalog, read_projects
+from .recovery import pending_transactions
 from .storage import locations
 
 
@@ -239,6 +240,11 @@ class SessionScanner:
 
     def scan(self) -> ScanResult:
         issues: list[ScanIssue] = []
+        for pending in pending_transactions(self.codex_home):
+            issues.append(ScanIssue(
+                str(pending), "interrupted_operation",
+                "Close the application and explicitly recover this transaction.", True,
+            ))
         sessions: dict[str, SessionRecord] = {}
         for path in self._files():
             record = parse_rollout(path, self.codex_home)

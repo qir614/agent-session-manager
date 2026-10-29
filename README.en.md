@@ -33,13 +33,15 @@ Use **Select all results**, **Invert**, or **Clear selection**. Selecting a proj
 
 ## Delete conversations
 
-Viewing, searching, rename, archive, and session export work while Codex is running. Multi-store deletion, state restore, backup deletion, and database maintenance require Codex/ChatGPT and background app-server processes to be closed.
+Viewing, searching, rename, archive, and session export work while Codex is running. Multi-store deletion, state restore, interrupted-transaction recovery, backup deletion, and database maintenance require Codex/ChatGPT and background app-server processes to be closed.
 
 The default GUI confirmation is `DELETE`. Settings can replace it with custom text or a template such as `DELETE-{count}`. Persistent pre-delete backup remains disabled by default.
 
 A complete deletion removes the selected dependency closure from rollout files, primary and legacy state databases, name history, known global-state mappings, local-host catalog rows, projected history, goals, queue, memory, snapshots, summaries, and thread-associated rows in both log databases.
 
 Before confirmation, the GUI reports user roots, subagents, rollout bytes, per-database references, associated log rows, exclusive and shared attachments, visualizations, generated images, recoverable backups, preserved project paths, and estimated transaction-snapshot space. Any failure restores rollout, state, indexes, logs, and private artifacts from a temporary transaction snapshot. A content-free operation journal records short thread hashes rather than raw IDs. New records go to `.agent-session-manager-operations.jsonl`; the legacy `.codex-local-session-cleaner-operations.jsonl` remains readable, is kept in state backups, and is handled by legacy-record cleanup, so an upgrade never loses existing deletion attestations.
+
+After deletion it re-queries every core table and planned private artifact, then rescans rollout identities under `sessions` and `archived_sessions`, name history, local input history, global state, and references in undeclared SQLite columns. Any surviving target ID, exclusive artifact, or unrecognized reference fails the run and rolls back instead of reporting a completed deletion.
 
 The cleaner deletes attachment directories referenced only by the selected dependency closure and UUID-keyed visualization or generated-image directories. Shared attachments remain and are reported. Existing backups that can restore the conversation also remain and prevent a misleading "fully purged" result. Real project directories, source files, Git repositories, ordinary output directories, and uploaded originals are never deleted automatically, even when the conversation created the project.
 
@@ -54,6 +56,19 @@ The GUI's **Historical residue cleanup** action scans for orphan attachment dire
 **Archive selected** stores the selected parent/descendant rollouts and a verified manifest. It does not copy complete state databases and cannot overwrite the current Codex state. This prevents one old conversation from silently rolling back unrelated newer conversations.
 
 When persistent pre-delete backup is enabled, cleanup creates a restorable state snapshot. Restoring one requires explicit `RESTORE` or `--force` confirmation and creates a temporary guard snapshot first. A failed restore returns to the pre-restore state.
+
+Restore compares current files with the post-cleanup baseline recorded in the snapshot: when the baseline exists and the current files differ, restore stops and needs a separate override; older snapshots without a recorded baseline only write targets that are missing or hash-identical.
+
+### Interrupted transactions and restore conflicts
+
+Deletion and restore keep an append-only transaction snapshot inside the Codex directory and rewrite an `operation.json` checkpoint at each phase. If the process is killed, the leftover `.cleaner-transaction_` or `.cleaner-restore-` directory raises a blocking scan issue, and planning and deletion refuse to run until it is recovered. The **Transaction recovery** toolbar button and the `recover` command only restore files listed in that manifest:
+
+```text
+python run_cli.py recover
+python run_cli.py recover PATH/TO/.cleaner-transaction_... --force
+```
+
+Without a directory it lists pending transactions. Recovery re-verifies snapshot hashes, manifest paths, and current file state, and stops when current files differ from the baseline or the checkpoint marks writes as unfinished; repeat with `--overwrite-conflicts` to proceed deliberately. Directories without `operation.json` or a complete manifest are never handled automatically and need manual inspection. This path is tested with forced process exits, not with hardware failure or every power-loss case.
 
 The GUI's **Backup manager** lists, verifies, restores, and safely deletes managed backups. It supports multi-delete, incomplete-backup cleanup, and count, age, and space retention rules. Deletion is limited to direct managed children of the configured backup root and refuses symlinks, junctions, the root itself, nested paths, and unrelated directories.
 
@@ -85,6 +100,8 @@ python run_cli.py orphans clean --grace-days 7 --apply --confirm CLEAN-N
 python run_cli.py delete <SESSION_ID> --apply --confirm DELETE-3
 python run_cli.py compact-logs
 python run_cli.py compact-logs --apply
+python run_cli.py recover
+python run_cli.py recover PATH/TO/.cleaner-transaction_... --force
 ```
 
 Build the EXE with `.\windows\build.ps1 -Clean`. Run tests with `python -m unittest discover -s tests -v`. Tests use isolated fixtures or temporary consistent copies and never delete real conversations. The tool does not upload sessions or expose credentials from `auth.json`.

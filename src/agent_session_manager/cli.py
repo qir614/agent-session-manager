@@ -13,13 +13,14 @@ from .backup import create_manual_backup
 from .backup_manager import delete_backup, list_backups
 from .codex_controller import CodexController
 from .conversation_reader import read_conversation
-from .executor import CleanupExecutor, restore_backup
+from .executor import CleanupExecutor, recover_transaction, restore_backup
 from .models import SessionStatus
 from .platforms import get_platform
 from .maintenance import compact_log_databases, log_database_stats
 from .impact_analyzer import analyze_deletion
 from .orphan_cleaner import execute_orphan_cleanup, scan_orphans
 from .planner import build_plan
+from .recovery import pending_transactions
 from .scanner import SessionScanner, default_codex_home
 
 
@@ -139,6 +140,20 @@ def build_parser() -> argparse.ArgumentParser:
     restore = sub.add_parser("restore", help="Restore a cleanup backup.")
     restore.add_argument("backup_dir", type=Path)
     restore.add_argument("--force", action="store_true")
+    restore.add_argument(
+        "--overwrite-conflicts", action="store_true",
+        help="Restore even though current files differ from the saved baseline.",
+    )
+
+    recover = sub.add_parser(
+        "recover", help="List or explicitly recover interrupted transactions."
+    )
+    recover.add_argument("transaction_dir", type=Path, nargs="?")
+    recover.add_argument("--force", action="store_true")
+    recover.add_argument(
+        "--overwrite-conflicts", action="store_true",
+        help="Recover even though current files differ from the recorded checkpoint.",
+    )
 
     sub.add_parser("gui", help="Open the graphical interface.")
     config = sub.add_parser("config", help="Show configuration paths and effective values.")
@@ -185,8 +200,23 @@ def _dispatch(argv: list[str] | None) -> int:
 
         launch(args.codex_home, application=args.app, session_root=args.sessions_root)
         return 0
+    if args.command == "recover":
+        if args.transaction_dir is None:
+            print(json.dumps(
+                [str(path) for path in pending_transactions(args.codex_home)], indent=2
+            ))
+            return 0
+        count = recover_transaction(
+            args.transaction_dir, args.codex_home,
+            force=args.force, overwrite_conflicts=args.overwrite_conflicts,
+        )
+        print(f"Recovered {count} files.")
+        return 0
     if args.command == "restore":
-        count = restore_backup(args.backup_dir, args.codex_home, args.force)
+        count = restore_backup(
+            args.backup_dir, args.codex_home, args.force,
+            overwrite_conflicts=args.overwrite_conflicts,
+        )
         print(f"Restored {count} files.")
         return 0
     if args.command == "compact-logs":
@@ -371,7 +401,9 @@ def _dispatch(argv: list[str] | None) -> int:
 def main(argv: list[str] | None = None) -> int:
     try:
         return _dispatch(argv)
-    except ValueError as exc:
+    except (OSError, RuntimeError, ValueError) as exc:
+        # Expected failures (missing backup, pending transaction, refused
+        # confirmation, unreadable session) must not reach users as tracebacks.
         print(f"Error: {exc}", file=sys.stderr)
         return 2
 

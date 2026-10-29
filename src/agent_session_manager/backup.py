@@ -13,8 +13,10 @@ from . import __version__
 
 from .audit import AUDIT_FILE_NAMES
 
+from .artifact_store import ARTIFACT_ROOTS
 from .dependency_graph import descendants
 from .models import CleanupPlan, ScanResult
+from .state_store import _atomic_write
 
 
 JSON_STATE_FILE_NAMES = (
@@ -61,6 +63,28 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def sync_file(path: Path) -> None:
+    """Flush a written file (and, elsewhere, its directory) to the storage device.
+
+    Windows rejects FlushFileBuffers on a handle opened read-only, and read-only
+    copies cannot be reopened for writing, so that platform is best effort.
+    """
+    modes = ("rb+", "ab", "rb") if os.name == "nt" else ("rb",)
+    for mode in modes:
+        try:
+            with path.open(mode) as stream:
+                os.fsync(stream.fileno())
+            break
+        except OSError:
+            continue
+    if os.name != "nt":
+        descriptor = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+
+
 def safe_relative_path(value: object) -> Path:
     if not isinstance(value, str) or not value.strip():
         raise ValueError("Backup entry path must be a non-empty string.")
@@ -81,6 +105,14 @@ def safe_relative_path(value: object) -> Path:
 def contained_path(root: Path, relative: object) -> Path:
     resolved_root = root.expanduser().resolve()
     rel = safe_relative_path(relative)
+    current = resolved_root
+    for part in rel.parts:
+        current = current / part
+        is_reparse = current.exists() and bool(
+            getattr(current.stat(), "st_file_attributes", 0) & 0x400
+        )
+        if current.is_symlink() or is_reparse:
+            raise ValueError(f"Backup path cannot follow a link: {relative}")
     candidate = (resolved_root / rel).resolve(strict=False)
     try:
         common = Path(os.path.commonpath((resolved_root, candidate)))
@@ -164,9 +196,7 @@ def create_backup(
         "include_logs": include_logs,
     }
     manifest_path = backup_dir / "manifest.json"
-    manifest_path.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    _atomic_write(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     return backup_dir, manifest
 
 
@@ -180,6 +210,7 @@ def _copy_stable(source: Path, target: Path, retries: int = 3) -> dict:
             source_hash = sha256_file(source)
             target_hash = sha256_file(target)
             if source_hash == target_hash:
+                sync_file(target)
                 return {"size": after.st_size, "sha256": target_hash, "attempts": attempt + 1}
         time.sleep(0.05 * (attempt + 1))
     target.unlink(missing_ok=True)
@@ -203,6 +234,7 @@ def _backup_sqlite_online(source: Path, target: Path) -> dict:
     if integrity != "ok":
         target.unlink(missing_ok=True)
         raise sqlite3.DatabaseError(f"Backup SQLite integrity failed: {integrity}")
+    sync_file(target)
     return {"size": target.stat().st_size, "sha256": sha256_file(target), "integrity": integrity}
 
 
@@ -258,8 +290,9 @@ def create_manual_backup(
             "status": "archive_complete",
             "restorable": False,
         }
-        (backup_dir / "manifest.json").write_text(
-            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        _atomic_write(
+            backup_dir / "manifest.json",
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         )
         return backup_dir, manifest
     except Exception:
@@ -273,8 +306,28 @@ def create_manual_backup(
 def update_manifest(backup_dir: Path, manifest: dict, **values: object) -> Path:
     manifest.update(values)
     path = backup_dir / "manifest.json"
-    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _atomic_write(path, json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     return path
+
+
+def validate_entry_path(relative: object, category: str) -> Path:
+    """Return a relative path that this tool is allowed to write back into a home."""
+    path = safe_relative_path(relative)
+    name = path.as_posix()
+    if category == "state" and name in JSON_STATE_FILE_NAMES:
+        return path
+    if category == "sqlite" and name in SQLITE_STATE_FILE_NAMES + LOG_SQLITE_FILE_NAMES:
+        return path
+    if category == "artifact" and path.parts[0] in ARTIFACT_ROOTS:
+        return path
+    if category == "session" and len(path.parts) > 1:
+        first = path.parts[0]
+        if first in {"sessions", "archived_sessions"}:
+            return path
+        # DSH projection caches live beside the sessions they describe.
+        if path.parts[:3] == ("storages", "session_projcache", "sessions") and path.suffix == ".json":
+            return path
+    raise ValueError(f"Backup entry is outside the supported restore scope: {relative}")
 
 
 def verify_backup(backup_dir: Path) -> dict:
@@ -291,15 +344,23 @@ def verify_backup(backup_dir: Path) -> dict:
     backup_type = str(manifest.get("backup_type") or "")
     if backup_type not in RESTORABLE_BACKUP_TYPES | {"session_archive"}:
         raise ValueError(f"Unsupported backup type: {backup_type}")
-    for entry in manifest.get("files", []):
+    entries = manifest.get("files")
+    if not isinstance(entries, list):
+        raise ValueError("Backup files must be a list.")
+    seen: set[str] = set()
+    for entry in entries:
         if not isinstance(entry, dict) or entry.get("category") not in {
             "session", "state", "sqlite", "artifact"
         }:
             raise ValueError("Backup contains an unsupported entry.")
-        path = contained_path(backup_dir, entry.get("relative_path"))
+        relative = validate_entry_path(entry.get("relative_path"), entry["category"]).as_posix()
+        if relative in seen:
+            raise ValueError("Backup contains duplicate paths.")
+        seen.add(relative)
+        path = contained_path(backup_dir, relative)
         if path.is_symlink():
             raise OSError(f"Backup entry cannot be a symbolic link: {path}")
-        if not path.is_file() or sha256_file(path) != entry["sha256"]:
+        if not path.is_file() or sha256_file(path) != entry.get("sha256"):
             raise OSError(f"Invalid backup entry: {path}")
         if entry.get("category") == "sqlite":
             connection = sqlite3.connect(path)
@@ -337,6 +398,9 @@ def restore_snapshot(backup_dir: Path, codex_home: Path) -> int:
             for suffix in ("-wal", "-shm"):
                 Path(str(target) + suffix).unlink(missing_ok=True)
         shutil.copy2(source, target)
+        if sha256_file(target) != entry.get("sha256"):
+            raise OSError(f"Restored file failed hash verification: {entry['relative_path']}")
+        sync_file(target)
         restored += 1
     return restored
 
