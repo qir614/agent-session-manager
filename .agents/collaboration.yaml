@@ -1,0 +1,24 @@
+schema_version: 1
+project_id: 5a866499104e4a26aa35e8c91514a946
+root: E:/projects/agent_session_manager
+git_enabled: true
+allow_local_commit: true
+allow_worktree_cleanup: true
+integration_branch: main
+max_parallel_writers: 2
+max_new_desktop_chats: 0
+models:
+  codex:
+    default: gpt-6.1-sol
+    reasoning_effort: high
+    light_scout: gpt-6-luna
+  dsh:
+    preserve_profile_selection: true
+memory:
+  search_mode: lexical
+  max_results: 5
+  max_result_chars: 12000
+resource_limits:
+  sqlite_cache_kib: 4096
+  node_heap_mib: 192
+  max_checkpoint_chars: 16000
