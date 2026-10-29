@@ -61,6 +61,7 @@ D:\miniconda3\envs\agent-session-manager\python.exe run_gui.py    # 或走 windo
 3. 以绝对路径调用 PyInstaller，显式补 `--hidden-import sqlite3 lzma bz2 tkinter _tkinter`。缺 `sqlite3` 时打包出的 EXE 里根本没有该模块，缺 `--add-binary`/`--add-data` 时 `_ctypes`、`_lzma`、`_bz2`、`_tkinter` 会因找不到 DLL 而导入失败——这些都不会表现为构建错误，只会让 EXE 启动后崩溃。
 4. 用 `pyi-archive_viewer` 反查归档，确认 `tkinter`、`_tkinter.pyd`、`tcl`/`tk` 数据、`sqlite3.dll`、`ffi.dll`、`_ctypes.pyd` 与包内平台模块都在，然后才继续。
 5. 以**可见窗口**启动一次 EXE 做烟测：隐藏或最小化启动拿不到 `MainWindowTitle`，会让健康的构建一直超时，所以这里不传 `-WindowStyle`。烟测使用临时 `CODEX_HOME`，结束后强制结束进程并清理。无交互桌面会话或加 `-SkipSmokeTest` 时跳过。
+6. 所有原生命令（探针、pip、PyInstaller）都经 `Invoke-Native` 调用。`$ErrorActionPreference = "Stop"` 会把任何写给 stderr 的内容（含 PyInstaller 的正常进度）升级成终止错误，脚本输出一旦被重定向（CI 日志、`2>&1 | Tee-Object`）就会让健康的构建中途 exit 1。
 
 ### 构建参数
 
@@ -91,6 +92,7 @@ Linux 专属测试在 Windows 跳过。共享的界面、扫描、清理和备�
 
 2026-10-29 在 Windows 10 (26100) 上实测：
 
-- `windows\build.ps1 -Clean` 用 conda 环境 `agent-session-manager` 完成构建，产出 `dist\AgentSessionManager.exe`（约 13 MB）与 `.sha256`，脚本内置的归档校验和 GUI 烟测均通过。
+- `windows\build.ps1 -Clean -Python D:\miniconda3\envs\agent-session-manager\python.exe` 在 `2>&1 | Tee-Object` 重定向下以 exit 0 完成构建，产出 `dist\AgentSessionManager.exe`（13,415,433 字节，SHA256 `dc88f056dc62e8e0fbad923795b9a116d1715b80c046eb099114cf180fa68903`）与 `.sha256`，脚本内置的归档校验和 GUI 烟测均通过；版本资源为 `FileVersion=2026.10.29`、`ProductName=Agent Session Manager`。
+- 手工复核 EXE 时要把 `TMP`/`TEMP` 指到可写目录：onefile 启动会先把归档解到 `%TEMP%\_MEI*`，系统临时目录不可写时弹出 `Failed to extract LIBBZ2.dll: failed to open target file! fopen: Permission denied` 错误框（不是程序逻辑错误）。`build.ps1` 自身已把两者指到 `.review-tmp`。
 - EXE 启动后主窗口标题为 `智能体会话管理器 · Agent Session Manager`；打包环境中 `ctypes.WinDLL("kernel32")`、`sqlite3`、`tkinter`、`lzma`、`bz2` 均可导入，DSH 的 zstd 解压可用（运行时从 PATH 或 Git/conda 安装位置加载 `libzstd.dll`）。
 - 尚未在官方 `actions/setup-python` 的标准 CPython 布局下本地复跑；CI 的 `windows-release.yml` 会覆盖该路径。

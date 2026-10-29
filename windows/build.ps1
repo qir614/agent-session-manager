@@ -369,8 +369,15 @@ if ($layout.SqliteDll) {
 }
 [void]$pyInstallerArgs.Add((Join-Path $projectRoot "run_gui.py"))
 
-& $buildPython @pyInstallerArgs
-if ($LASTEXITCODE -ne 0) {
+# PyInstaller writes its progress to stderr. When this script's own output is
+# redirected (CI logs, Tee-Object), Windows PowerShell 5.1 turns that stderr into
+# terminating error records and the build would abort mid-flight, so the call goes
+# through Invoke-Native and its output is replayed afterwards.
+$buildResult = Invoke-Native -Exe $buildPython -Arguments $pyInstallerArgs
+foreach ($line in $buildResult.Output) {
+    Write-Host "$line"
+}
+if ($buildResult.ExitCode -ne 0) {
     throw "PyInstaller failed to build the Windows application."
 }
 
