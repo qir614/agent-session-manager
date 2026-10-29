@@ -8,12 +8,12 @@ A Linux and Windows viewer, archive, backup, and privacy cleaner for Codex local
 
 ## Run on your operating system
 
-- Linux: activate a conda environment that provides Tcl/Tk (named `codex-cleaner` on the current Linux host), then run `bash linux/start.sh`. See [linux/README.md](linux/README.md).
+- Linux: activate the project conda environment `agent-session-manager` (`conda env create -f environment.yml`; it is still named `codex-cleaner` on the current Linux host), then run `bash linux/start.sh`. See [linux/README.md](linux/README.md).
 - Windows: run `windows/start.bat`, or download the EXE from Releases. See [windows/README.md](windows/README.md).
 
 Platform launchers and documentation are separate. Shared Python entry points remain `run_gui.py` and `run_cli.py`.
 
-On Windows, `windows/start.bat` probes for a Python with Tcl/Tk (skipping the Microsoft Store `WindowsApps` stub) and falls back to `set ASM_PYTHON=<full path to python.exe>` when detection fails.
+The project owns a dedicated conda environment `agent-session-manager`, defined in [environment.yml](environment.yml): `conda env create -f environment.yml` reproduces it anywhere (Python 3.11 + Tcl/Tk + PyInstaller). On Windows, `windows/start.bat` looks for `envs\agent-session-manager` first, then keeps probing for another Python with Tcl/Tk (skipping the Microsoft Store `WindowsApps` stub), and falls back to `set ASM_PYTHON=<full path to python.exe>` when detection fails.
 
 ## What the interface shows
 
@@ -86,7 +86,13 @@ Journals and backups stay compatible: new operation records go to `.agent-sessio
 
 ## Source and CLI
 
-Run with Python 3.11+ including Tcl/Tk:
+Run with Python 3.11+ including Tcl/Tk. The project environment already provides them:
+
+```bash
+conda env create -f environment.yml
+conda activate agent-session-manager
+python -m pip install --no-build-isolation -e .   # installs the agent-session-manager CLI and GUI commands
+```
 
 ```powershell
 python run_gui.py
@@ -106,7 +112,7 @@ python run_cli.py recover
 python run_cli.py recover PATH/TO/.cleaner-transaction_... --force
 ```
 
-Build the EXE with `.\windows\build.ps1 -Clean`; on Windows the dedicated conda environment `agent-session-manager` already has PyInstaller and builds offline: `.\windows\build.ps1 -Clean -Python D:\miniconda3\envs\agent-session-manager\python.exe`. See [windows/README.md](windows/README.md). Run tests with `python -m unittest discover -s tests -v`. Tests use isolated fixtures or temporary consistent copies and never delete real conversations. The tool does not upload sessions or expose credentials from `auth.json`.
+Build the EXE with `.\windows\build.ps1 -Clean`; on Windows the dedicated conda environment `agent-session-manager` already has PyInstaller and builds offline: `.\windows\build.ps1 -Clean -Python D:\miniconda3\envs\agent-session-manager\python.exe`. See [windows/README.md](windows/README.md). Run tests inside the project environment with `python -B -m unittest discover -s tests -t . -v` (170 tests, 17 skipped on Windows in the reference environment); Linux uses `bash linux/test.sh -q`. Tests use isolated fixtures or temporary consistent copies and never delete real conversations. The tool does not upload sessions or expose credentials from `auth.json`.
 
 ## License
 

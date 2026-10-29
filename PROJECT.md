@@ -8,7 +8,7 @@
 
 固定项目根：E:\projects\agent_session_manager\（Windows 主机；产品、仓库与本地检出目录均已更名为 Agent Session Manager／agent-session-manager，旧路径 E:\projects\codex-local-session-cleaner 不再存在）。项目内的隔离工作树、报告、恢复材料和临时文件均留在该目录。不得改动其他检出或旧工作树。
 
-Windows 验证使用 DSH 自带 Python：C:\Users\qir\.dsh\dsh-runtimes\dsh-next-primary-runtime\dependencies\python\python.exe（含 Tcl/Tk 8.6），设置 PYTHONPATH=src、TMP/TEMP=<项目根>\.review-tmp 并以 -B 运行。Linux 回归使用已有的带 Tcl/Tk 的 conda 环境（当前 Linux 主机上名为 codex-cleaner，属旧项目名遗留，尚未在本机验证改名）；若确需其他环境，只能经授权使用 conda；不安装系统或全局 Python 依赖。Windows 的 EXE 构建使用项目专属 conda 环境 agent-session-manager（D:\miniconda3\envs\agent-session-manager，已装 PyInstaller 6.22.3，可离线构建），构建入口见 windows/README.md。大型产物放磁盘，不将代码、数据库或大体积测试夹具放入系统临时目录。
+项目使用专属 conda 环境 agent-session-manager，定义见根目录 environment.yml（python 3.11 + tk + PyInstaller）。Windows 上为 D:\miniconda3\envs\agent-session-manager，已以可编辑模式安装本项目（pip install -e .），提供 agent-session-manager 与 agent-session-manager-gui 两个命令，并作为回归测试、GUI 启动与 EXE 构建的默认环境（PyInstaller 6.22.3，可离线构建）。已以可编辑模式安装本项目后运行与测试不再需要 PYTHONPATH，但仍需把 TMP/TEMP 指到 <项目根>\.review-tmp 并以 -B 运行（未安装时补 PYTHONPATH=src）。Linux 回归使用同一 environment.yml 创建的项目环境（当前 Linux 主机上的现成环境名仍为 codex-cleaner，属旧项目名遗留，尚未在本机验证改名）；若确需其他环境，只能经授权使用 conda；不安装系统或全局 Python 依赖。DSH 自带 Python 只在项目环境不可用且用户同意时作为临时兜底，不作为项目环境。Windows 的 EXE 构建入口见 windows/README.md。大型产物放磁盘，不将代码、数据库或大体积测试夹具放入系统临时目录。
 
 ## 架构
 
@@ -22,7 +22,7 @@ Python 共享逻辑位于 src/agent_session_manager；applications 分离 Codex 
 
 ## 验证与记录
 
-Windows 回归入口（项目根目录，使用上面的自带 Python）：设置 PYTHONPATH=src、TMP/TEMP=<项目根>\.review-tmp 后运行 python -B -m unittest discover -s tests -t . -v。Linux 回归入口：激活带 Tcl/Tk 的 conda 环境后执行 bash linux/test.sh -q（当前 Linux 主机上的环境名仍为 codex-cleaner，或 PATH=/home/qir/miniconda3/envs/codex-cleaner/bin:$PATH）。临时目录必须位于项目内且已存在，命令使用 -B 避免生成 Python 缓存。测试应覆盖删除范围、保留对象、未知结构阻止、预览变化及失败恢复。GUI 行为改变时还需实际打开核对。
+Windows 回归入口（项目根目录，使用项目 conda 环境 D:\miniconda3\envs\agent-session-manager\python.exe，或已激活该环境后的 python）：把 TMP/TEMP 设为 <项目根>\.review-tmp 后运行 python -B -m unittest discover -s tests -t . -v（已可编辑安装故无需 PYTHONPATH；未安装时补 PYTHONPATH=src）。Linux 回归入口：激活带 Tcl/Tk 的 conda 环境后执行 bash linux/test.sh -q（当前 Linux 主机上的环境名仍为 codex-cleaner，或 PATH=/home/qir/miniconda3/envs/codex-cleaner/bin:$PATH）。临时目录必须位于项目内且已存在，命令使用 -B 避免生成 Python 缓存。测试应覆盖删除范围、保留对象、未知结构阻止、预览变化及失败恢复。GUI 行为改变时还需实际打开核对。
 
 任务记录留在项目 .memory 和协调记录中；格式依据见 THREAD_FORMAT.md、DSH_FORMAT.md，审查及测试证据留在 reports。PROJECT_VERSION.md 保留简短版本和恢复记录。仅清理已确认归属且不再需要的本任务临时产物。
 

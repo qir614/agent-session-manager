@@ -10,12 +10,12 @@ Agent Session Manager（智能体会话管理器）是支持 Codex 与 DSH 的�
 
 | 系统 | 专属目录 | 启动入口 | 使用说明 |
 | --- | --- | --- | --- |
-| Linux | `linux/` | 激活已装好 Tcl/Tk 的 conda 环境（本机现名 `codex-cleaner`）后运行 `bash linux/start.sh` | [Linux 说明](linux/README.md) |
+| Linux | `linux/` | 激活项目 conda 环境 `agent-session-manager`（`conda env create -f environment.yml`；本机现成为旧名 `codex-cleaner`）后运行 `bash linux/start.sh` | [Linux 说明](linux/README.md) |
 | Windows | `windows/` | 双击 `windows/start.bat` | [Windows 说明](windows/README.md) |
 
 根目录的 `run_gui.py`、`run_cli.py` 是共享 Python 入口；平台脚本只负责启动，扫描、清理、备份逻辑只有一套。
 
-Windows 上的 `windows/start.bat` 会自动探测带 Tcl/Tk 的 Python（跳过 Microsoft Store 的 `WindowsApps` 存根），失败时可用 `set ASM_PYTHON=<python.exe 完整路径>` 指定解释器。
+项目使用专属 conda 环境 `agent-session-manager`，定义见根目录 [environment.yml](environment.yml)：`conda env create -f environment.yml` 即可在任意机器上还原（Python 3.11 + Tcl/Tk + PyInstaller）。Windows 上的 `windows/start.bat` 会先找项目环境 `envs\agent-session-manager`，再依次探测其他带 Tcl/Tk 的 Python（跳过 Microsoft Store 的 `WindowsApps` 存根），失败时可用 `set ASM_PYTHON=<python.exe 完整路径>` 指定解释器。
 
 ## 项目结构
 
@@ -167,7 +167,15 @@ python run_cli.py recover PATH/TO/.cleaner-transaction_... --force
 
 ## 从源码运行
 
-需要带 Tcl/Tk 的 Python 3.11 或更高版本。环境要求和启动方法按系统分别见 [Linux](linux/README.md) 与 [Windows](windows/README.md)。
+需要带 Tcl/Tk 的 Python 3.11 或更高版本。推荐直接创建项目环境，它已包含运行与构建所需的依赖：
+
+```bash
+conda env create -f environment.yml
+conda activate agent-session-manager
+python -m pip install --no-build-isolation -e .   # 提供 agent-session-manager / agent-session-manager-gui 命令
+```
+
+环境要求和启动方法按系统分别见 [Linux](linux/README.md) 与 [Windows](windows/README.md)。
 
 ## CLI
 
@@ -202,7 +210,7 @@ Windows 上推荐用项目专属 conda 环境构建，它已装好 PyInstaller�
 .\windows\build.ps1 -Clean -Python D:\miniconda3\envs\agent-session-manager\python.exe
 ```
 
-Linux 本地回归测试使用已装好 Tcl/Tk 的 conda 环境（本机现名 `codex-cleaner`），执行 `bash linux/test.sh -q`；临时数据放在项目磁盘目录 `.review-tmp/`。平台专属测试分别位于 `tests/linux/` 和 `tests/windows/`，不适用的平台测试会跳过。
+回归测试统一在项目 conda 环境 `agent-session-manager`（即 [environment.yml](environment.yml) 定义的环境）中运行。Windows 使用该环境解释器执行 `python -B -m unittest discover -s tests -t . -v`，实测 `Ran 170 tests` / `OK (skipped=17)`；Linux 执行 `bash linux/test.sh -q`（当前 Linux 主机上的现成环境名仍为旧名 `codex-cleaner`）。临时数据放在项目磁盘目录 `.review-tmp/`。平台专属测试分别位于 `tests/linux/` 和 `tests/windows/`，不适用的平台测试会跳过。
 
 测试只使用临时构造的数据或真实数据库的临时一致性副本，不删除真实会话。工具不联网、不上传会话，也不会读取或输出 `auth.json` 中的凭据内容。
 

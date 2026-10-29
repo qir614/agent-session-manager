@@ -4,7 +4,14 @@
 
 ## 启动
 
-需要一个带 Tcl/Tk 的 Python 3.11+ 环境；脚本不创建环境、不安装依赖。当前 Linux 主机上现成的 conda 环境名为 `codex-cleaner`（旧项目名遗留），继续使用它即可。先确认环境可用：
+需要一个带 Tcl/Tk 的 Python 3.11+ 环境；脚本不创建环境、不安装依赖。项目环境由根目录 `environment.yml` 定义，名称为 `agent-session-manager`：
+
+```bash
+conda env create -f environment.yml
+conda activate agent-session-manager
+```
+
+当前 Linux 主机上的现成环境仍叫旧名 `codex-cleaner`，继续使用它即可。先确认环境可用：
 
 ```bash
 python -c "import tkinter; print(tkinter.TkVersion)"
@@ -12,7 +19,7 @@ python -c "import tkinter; print(tkinter.TkVersion)"
 
 ```bash
 cd /path/to/agent-session-manager
-conda activate codex-cleaner
+conda activate codex-cleaner   # 或新名 agent-session-manager
 bash linux/start.sh
 ```
 

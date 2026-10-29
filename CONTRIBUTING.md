@@ -4,7 +4,15 @@ Contributions are welcome, especially synthetic compatibility fixtures for newer
 
 ## Development
 
-Linux: activate a conda environment that provides Tcl/Tk (named `codex-cleaner` on the current Linux host) and run `bash linux/test.sh -v`. Temporary fixtures stay under the project's `.review-tmp/`. Launch with `bash linux/start.sh`.
+Both platforms use the project conda environment `agent-session-manager`, defined in [environment.yml](environment.yml):
+
+```bash
+conda env create -f environment.yml
+conda activate agent-session-manager
+python -m pip install --no-build-isolation -e .
+```
+
+Linux (the current Linux host still has this environment under the legacy name `codex-cleaner`): run `bash linux/test.sh -v`, and launch with `bash linux/start.sh`. Temporary fixtures stay under the project's `.review-tmp/`.
 
 Windows instructions, launcher and build script live in [windows/README.md](windows/README.md).
 

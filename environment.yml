@@ -1,0 +1,16 @@
+# Reproducible runtime/build environment for Agent Session Manager.
+#
+#   conda env create -f environment.yml
+#   conda activate agent-session-manager
+#   python -m pip install -e ".[build]"   # optional: console scripts + PyInstaller
+#
+# Channels are left unset on purpose so conda uses the user's configured
+# channels; the reference environment on this host was created with
+# "conda create -n agent-session-manager python=3.11 tk -y".
+name: agent-session-manager
+dependencies:
+  - python=3.11
+  - tk
+  - pip
+  - pip:
+      - pyinstaller>=6.14,<7

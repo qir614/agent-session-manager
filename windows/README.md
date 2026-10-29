@@ -4,13 +4,30 @@
 
 ## 启动
 
-普通用户可以从仓库 Releases 下载 `AgentSessionManager.exe` 和 `.sha256` 校验文件后直接运行。源码用户双击 `windows/start.bat`；它从项目根目录查找 EXE、`dist` 中的 EXE，找不到时依次探测可用的 Python：`ASM_PYTHON` 环境变量、`py -3`、PATH 上的 `python.exe`、各盘符与 `%LOCALAPPDATA%\Programs\Python` 下的 conda/官方安装，用 `import tkinter` 实际验证后以 `pythonw.exe` 启动共享入口 `run_gui.py`。
+普通用户可以从仓库 Releases 下载 `AgentSessionManager.exe` 和 `.sha256` 校验文件后直接运行。源码用户双击 `windows/start.bat`；它从项目根目录查找 EXE、`dist` 中的 EXE，找不到时依次探测可用的 Python：`ASM_PYTHON` 环境变量、**各 conda 安装根下的 `envs\agent-session-manager`（本项目专属环境）**、`py -3`、PATH 上的 `python.exe`、各盘符与 `%LOCALAPPDATA%\Programs\Python` 下的 conda/官方安装，用 `import tkinter` 实际验证后以 `pythonw.exe` 启动共享入口 `run_gui.py`。
 
 Microsoft Store 的 `WindowsApps\python.exe` 是占位存根，执行会静默失败且退出码为 9009，脚本会跳过它。若自动探测失败，把可用解释器的完整路径写入 `ASM_PYTHON` 再运行即可。
 
 源码运行需要带 Tcl/Tk 的 Python 3.11+。如果出现 `Can't find a usable init.tcl`，使用带完整 Tcl/Tk 的 Python 运行库或已打包的 EXE。
 
 配置文件位于 `%LOCALAPPDATA%\AgentSessionManager\settings.json`，数据默认位于 `%USERPROFILE%\.codex`，也可以通过 `CODEX_HOME` 指定。目录定位使用 Explorer，进程枚举优先使用 Toolhelp32，失败时回退到 `tasklist`。
+
+## 环境
+
+本项目使用专属 conda 环境 `agent-session-manager`，定义在根目录 `environment.yml`（python 3.11 + tk + PyInstaller）：
+
+```powershell
+conda env create -f environment.yml
+conda activate agent-session-manager
+python -m pip install --no-build-isolation -e .
+```
+
+安装后该环境同时提供 `agent-session-manager`（CLI）与 `agent-session-manager-gui`（GUI）两个命令，并把源码目录以可编辑模式注册进去，所以运行、测试和 EXE 构建都不必再设 `PYTHONPATH`。本机现有环境位于 `D:\miniconda3\envs\agent-session-manager`（Python 3.11.18、Tk 8.6、PyInstaller 6.22.3），即下面命令中的路径。
+
+```powershell
+D:\miniconda3\envs\agent-session-manager\Scripts\agent-session-manager.exe scan
+D:\miniconda3\envs\agent-session-manager\python.exe run_gui.py    # 或走 windows\start.bat
+```
 
 ## 构建 EXE
 
@@ -60,12 +77,13 @@ Microsoft Store 的 `WindowsApps\python.exe` 是占位存根，执行会静默�
 从项目根目录执行：
 
 ```powershell
-$env:PYTHONPATH = "src"
 New-Item -ItemType Directory -Force .review-tmp | Out-Null
 $env:TMP = (Resolve-Path .review-tmp).Path
 $env:TEMP = $env:TMP
-python -B -m unittest discover -s tests -t . -v
+D:\miniconda3\envs\agent-session-manager\python.exe -B -m unittest discover -s tests -t . -v
 ```
+
+用项目环境跑全量回归实测为 `Ran 170 tests` / `OK (skipped=17)`，约 3 分钟。若改用未安装本项目的方式运行，再补 `$env:PYTHONPATH = "src"`。
 
 Linux 专属测试在 Windows 跳过。共享的界面、扫描、清理和备份逻辑见[项目说明](../README.md)。
 
